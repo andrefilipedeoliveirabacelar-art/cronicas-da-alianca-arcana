@@ -97,3 +97,11 @@ ALTER TABLE rooms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
 ALTER TABLE player_hands DISABLE ROW LEVEL SECURITY;
 ALTER TABLE game_logs DISABLE ROW LEVEL SECURITY;
+
+-- 8. PERMISSÕES PARA AS ROLES anon E authenticated
+GRANT ALL ON TABLE card_catalog TO anon, authenticated;
+GRANT ALL ON TABLE rooms TO anon, authenticated;
+GRANT ALL ON TABLE players TO anon, authenticated;
+GRANT ALL ON TABLE player_hands TO anon, authenticated;
+GRANT ALL ON TABLE game_logs TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
