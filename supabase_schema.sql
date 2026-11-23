@@ -3,7 +3,7 @@
 -- Cole este script no SQL Editor do seu projeto Supabase
 -- =====================================================
 
--- Extensão UUID
+-- 0. Extensão para geração de UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. TABELA: card_catalog
@@ -42,9 +42,9 @@ SET
 CREATE TABLE IF NOT EXISTS rooms (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   code VARCHAR(6) UNIQUE NOT NULL,
-  status VARCHAR(20) DEFAULT 'waiting', -- 'waiting' | 'playing' | 'finished'
+  status VARCHAR(20) DEFAULT 'waiting',
   current_turn_player_id UUID,
-  turn_phase VARCHAR(30) DEFAULT 'action', -- 'action' | 'challenge_window' | 'block_window' | 'resolve'
+  turn_phase VARCHAR(30) DEFAULT 'action',
   pending_action JSONB DEFAULT NULL,
   deck JSONB DEFAULT '[]'::jsonb,
   winner_player_id UUID DEFAULT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS player_hands (
   room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
   player_id UUID REFERENCES players(id) ON DELETE CASCADE,
   card_code VARCHAR(50) REFERENCES card_catalog(code),
-  slot_index INT NOT NULL, -- 1 ou 2
+  slot_index INT NOT NULL,
   is_revealed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -80,19 +80,18 @@ CREATE TABLE IF NOT EXISTS game_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
   actor_nickname VARCHAR(50),
-  event_type VARCHAR(30), -- 'ACTION' | 'BLUFF_CALL' | 'BLOCK' | 'ELIMINATED' | 'SYSTEM'
+  event_type VARCHAR(30),
   message TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- HABILITAR SUPABASE REALTIME PARA AS TABELAS DO JOGO
+-- 6. HABILITAR SUPABASE REALTIME
 ALTER PUBLICATION supabase_realtime ADD TABLE rooms;
 ALTER PUBLICATION supabase_realtime ADD TABLE players;
 ALTER PUBLICATION supabase_realtime ADD TABLE player_hands;
 ALTER PUBLICATION supabase_realtime ADD TABLE game_logs;
 
--- DESABILITAR ROW LEVEL SECURITY (RLS) PARA ACESSO ANÔNIMO DIRETO
--- (Ou permitir políticas públicas de leitura/escrita para a chave anon)
+-- 7. DESABILITAR RLS PARA ACESSO ANÔNIMO DIRETO
 ALTER TABLE card_catalog DISABLE ROW LEVEL SECURITY;
 ALTER TABLE rooms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
