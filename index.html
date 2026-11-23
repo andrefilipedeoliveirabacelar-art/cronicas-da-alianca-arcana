@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Crônicas da Aliança Arcana | Jogo de Cartas & Blefe</title>
+    
+    <!-- Google Fonts: Cinzel & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="bg-fantasy-dark text-slate-100 min-h-screen flex flex-col font-inter">
+
+    <!-- CABEÇALHO GLOBAL -->
+    <header class="w-full border-b border-amber-500/20 bg-fantasy-surface/90 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-md">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl filter drop-shadow">✨</span>
+        <div>
+          <h1 class="font-title text-sm sm:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-400 tracking-wider">
+            Crônicas da Aliança Arcana
+          </h1>
+          <p class="text-[9px] sm:text-[10px] text-slate-400 font-medium">Heróis Amam Mentir nos Reinos da Magia</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Botão Grimório de Regras -->
+        <button
+          id="btn-open-rules"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-title text-xs font-semibold shadow-sm transition transform active:scale-95"
+          title="Ver Tabela de Regras e Habilidades"
+        >
+          <span>📜</span>
+          <span class="hidden sm:inline">Grimório de Regras</span>
+        </button>
+
+        <!-- Botão Configurar Supabase -->
+        <button
+          id="btn-open-db-config"
+          class="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition"
+          title="Configuração Supabase"
+        >
+          ⚙️
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <main class="flex-1 w-full max-w-7xl mx-auto flex flex-col p-2 sm:p-4 relative">
+
+      <!-- ============================================== -->
+      <!-- TELA 1: LOBBY (CRIAR / ENTRAR / SALA DE ESPERA) -->
+      <!-- ============================================== -->
+      <section id="screen-lobby" class="w-full max-w-xl mx-auto my-auto py-6 space-y-6">
+
+        <!-- Banner Heroico -->
+        <div class="text-center space-y-2">
+          <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full border-2 border-amber-500/40 bg-gradient-to-tr from-purple-950 to-slate-900 flex items-center justify-center text-3xl sm:text-4xl shadow-arcane-glow">
+            🗡️
+          </div>
+          <h2 class="font-title text-2xl sm:text-3xl font-extrabold text-amber-300 tracking-wide drop-shadow">
+            Santuário dos Herois
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
+            Blefe, deduza identidades secretas e elimine seus rivais para reivindicar a supremacia arcana.
+          </p>
+        </div>
+
+        <!-- Alerta de Conexão Supabase (se necessário) -->
+        <div id="lobby-supabase-notice" class="hidden p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span>⚠️</span>
+            <span>Credenciais do Supabase ausentes ou incompletas.</span>
+          </div>
+          <button id="btn-fix-credentials" class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold text-[10px] uppercase">
+            Configurar
+          </button>
+        </div>
+
+        <!-- Painel de Entrada no Jogo (Antes de estar em uma sala) -->
+        <div id="lobby-form-container" class="bg-fantasy-surface/90 border border-amber-500/30 rounded-2xl p-4 sm:p-6 shadow-xl space-y-5">
+          
+          <!-- Nome e Avatar -->
+          <div class="space-y-3">
+            <div>
+              <label for="input-nickname" class="block font-title text-xs font-semibold text-amber-300 uppercase tracking-wider mb-1">
+                Seu Nome Arcano
+              </label>
+              <input
+                id="input-nickname"
+                type="text"
+                maxlength="16"
+                placeholder="Ex: Gandalf, Percy, Harry..."
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 text-slate-100 text-sm font-medium transition"
+              />
+            </div>
+
+            <div>
+              <label class="block font-title text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                Escolha seu Arquétipo
+              </label>
+              <div class="grid grid-cols-4 sm:grid-cols-7 gap-2" id="avatar-selector">
+                <button type="button" data-avatar="mago" class="avatar-opt p-2 rounded-xl border-2 border-amber-400 bg-amber-500/20 text-center flex flex-col items-center justify-center transition">
+                  <span class="text-2xl">🧙‍♂️</span>
+                  <span class="text-[9px] font-medium text-slate-300 mt-1">Mago</span>
+                </button>
+                <button type="button" data-avatar="semideus" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
+                  <span class="text-2xl">⚡</span>
+                  <span class="text-[9px] font-medium text-slate-300 mt-1">Semideus</span>
+                </button>
+                <button type="button" data-avatar="elfo" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
+                  <span class="text-2xl">🧝</span>
+                  <span class="text-[9px] font-medium text-slate-300 mt-1">Elfo</span>
+                </button>
+                <button type="button" data-avatar="guerreiro" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
+                  <span class="text-2xl">⚔️</span>
+                  <span class="text-[9px] font-medium text-slate-300 mt-1">Guerreiro</span>
+                </button>
+                <button type="button" data-avatar="anão" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
+                  <span class="text-2xl">⛏️</span>
+                  <span class="text-[9px] font-medium text-slate-300 mt-1">Anão</span>
+                </button>
+                <button type="button" data-avatar="oraculo" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
+                  <span class="text-2xl">🔮</span>
+                  <span class="text-[9px] font-medium text-slate-300 mt-1">Oráculo</span>
+                </button>
+                <button type="button" data-avatar="ladrao" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
+                  <span class="text-2xl">🗡️</span>
+                  <span class="text-[9px] font-medium text-slate-300 mt-1">Ladrão</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Criar Sala -->
+            <div class="space-y-2">
+              <span class="block text-xs font-title font-semibold text-slate-300">Criar Novo Conclave</span>
+              <button
+                id="btn-create-room"
+                class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-sm font-bold shadow-gold-glow tracking-wider uppercase transition transform active:scale-95"
+              >
+                👑 Criar Sala
+              </button>
+            </div>
+
+            <!-- Entrar com Código -->
+            <div class="space-y-2">
+              <span class="block text-xs font-title font-semibold text-slate-300">Entrar em Aliança Existente</span>
+              <div class="flex gap-2">
+                <input
+                  id="input-room-code"
+                  type="text"
+                  maxlength="6"
+                  placeholder="CÓDIGO (ex: RUNA)"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-purple-400 focus:outline-none text-slate-100 text-xs uppercase font-mono tracking-widest text-center"
+                />
+                <button
+                  id="btn-join-room"
+                  class="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-title text-xs font-bold tracking-wider uppercase transition"
+                >
+                  Entrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sala de Espera do Lobby (Quando já criou ou entrou em uma sala) -->
+        <div id="lobby-waiting-container" class="hidden bg-fantasy-surface/95 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-5">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <span class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Código da Aliança</span>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span id="display-room-code" class="font-title text-2xl sm:text-3xl font-extrabold text-amber-400 tracking-widest font-mono">
+                  ----
+                </span>
+                <button
+                  id="btn-copy-code"
+                  class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-amber-300 text-xs font-semibold flex items-center gap-1 transition"
+                  title="Copiar Código"
+                >
+                  <span>📋</span>
+                  <span id="copy-btn-text">Copiar</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="player-count-badge" class="text-xs font-semibold text-emerald-400">
+                1 / 6 Jogadores
+              </span>
+            </div>
+          </div>
+
+          <!-- Lista de Jogadores no Lobby -->
+          <div>
+            <h3 class="font-title text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              Guerreiros Presentes:
+            </h3>
+            <div id="lobby-players-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <!-- Renderizado via JS -->
+            </div>
+          </div>
+
+          <!-- Ação do Host para Iniciar Partida -->
+          <div class="border-t border-slate-800 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <button
+              id="btn-leave-lobby"
+              class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 text-xs font-semibold transition"
+            >
+              🚪 Abandonar Aliança
+            </button>
+
+            <div id="host-start-container">
+              <button
+                id="btn-start-game"
+                disabled
+                class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-sm font-bold shadow-gold-glow tracking-wider uppercase transition opacity-40 cursor-not-allowed"
+              >
+                ⚔️ Iniciar Partida (Mín. 2)
+              </button>
+            </div>
+            <div id="guest-waiting-text" class="hidden text-xs text-amber-400/80 italic text-center sm:text-right">
+              Aguardando o Soberano da Sala iniciar a contenda...
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TELA 2: MESA DE JOGO (BATALHA REALTIME)        -->
+      <!-- ============================================== -->
+      <section id="screen-mesa" class="hidden flex-1 flex flex-col justify-between space-y-3 pb-2">
+        
+        <!-- BARRA SUPERIOR DA MESA: OPONENTES -->
+        <div class="w-full">
+          <div class="flex items-center justify-between px-2 py-1 text-xs text-slate-400">
+            <div class="flex items-center gap-2">
+              <span class="font-title font-semibold text-amber-400">Sala:</span>
+              <span id="mesa-room-code" class="font-mono font-bold text-slate-200">----</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="mesa-phase-indicator" class="px-2 py-0.5 rounded-full bg-purple-900/40 border border-purple-500/30 text-purple-300 text-[10px] uppercase font-bold tracking-wider">
+                Fase: Ação
+              </span>
+            </div>
+          </div>
+
+          <!-- ARENA DOS OPONENTES -->
+          <div id="mesa-opponents-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
+            <!-- Inserido dinamicamente via renderMesa.js -->
+          </div>
+        </div>
+
+        <!-- ÁREA CENTRAL: ALTAR DAS CRÔNICAS & AÇÕES PENDENTES -->
+        <div class="my-auto py-2">
+          <div id="mesa-altar-container" class="w-full">
+            <!-- Inserido dinamicamente via renderMesa.js -->
+          </div>
+        </div>
+
+        <!-- BARRA INFERIOR: REINO DO JOGADOR LOCAL -->
+        <div class="w-full bg-fantasy-surface/95 border-2 border-amber-500/30 rounded-2xl p-3 sm:p-4 shadow-2xl space-y-3 backdrop-blur-md">
+          
+          <!-- Informações do Jogador Local & Suas 2 Cartas -->
+          <div class="flex flex-col md:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            
+            <!-- Dados do Jogador -->
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl border border-amber-500/40 bg-slate-900 flex items-center justify-center text-2xl shadow-inner">
+                <span id="local-player-avatar">🧙‍♂️</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span id="local-player-name" class="font-title text-base sm:text-lg font-bold text-amber-300">
+                    Você
+                  </span>
+                  <span id="local-turn-badge" class="hidden px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-title text-[10px] font-extrabold uppercase shadow animate-pulse">
+                    Sua Vez!
+                  </span>
+                </div>
+                
+                <div class="flex items-center gap-3 text-xs mt-1">
+                  <div class="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-950/60 border border-amber-500/40 text-amber-300 font-bold">
+                    <span>💎</span>
+                    <span id="local-player-runes">2</span>
+                    <span class="text-[10px] text-amber-400 font-normal">Runas</span>
+                  </div>
+                  <span id="local-player-status" class="text-emerald-400 font-semibold text-[11px]">
+                    ● Em Combate
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- As 2 Cartas do Jogador Local -->
+            <div class="flex items-center gap-3" id="local-player-cards">
+              <!-- Inserido dinamicamente via renderMesa.js -->
+            </div>
+          </div>
+
+          <!-- Barra de Ações do Turno -->
+          <div id="mesa-action-bar-container">
+            <!-- Inserido dinamicamente via renderMesa.js -->
+          </div>
+        </div>
+
+        <!-- CRÔNICAS DA MESA (FEED DE LOGS) EXPANSÍVEL -->
+        <div class="w-full bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
+          <div class="px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-amber-400">📜</span>
+              <span class="font-title font-bold text-slate-300">Crônicas do Santuário</span>
+            </div>
+            <span class="text-[10px] text-slate-500">Eventos em Tempo Real</span>
+          </div>
+          <div id="mesa-logs-container" class="max-h-28 sm:max-h-36 overflow-y-auto p-2 space-y-1.5">
+            <!-- Logs inseridos dinamicamente -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ============================================== -->
+    <!-- MODAL 1: GRIMÓRIO DE REGRAS COMPLETO           -->
+    <!-- ============================================== -->
+    <div id="modal-rules" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+      <div class="w-full max-w-2xl bg-fantasy-surface border-2 border-amber-500/50 rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-amber-500/30 pb-3 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📜</span>
+            <h3 class="font-title text-base sm:text-xl font-bold text-amber-300">
+              Grimório Sagrado das Regras & Cartas
+            </h3>
+          </div>
+          <button id="btn-close-rules" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm">
+            ✕
+          </button>
+        </div>
+
+        <div id="rules-content" class="flex-1 overflow-y-auto pr-1">
+          <!-- Renderizado via renderMesa.js -->
+        </div>
+
+        <div class="border-t border-slate-800 pt-3 text-right">
+          <button id="btn-close-rules-bottom" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-title text-xs font-bold uppercase tracking-wider">
+            Fechar Grimório
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 2: SELETOR DE ALVO (ATAQUE / ROUBO)      -->
+    <!-- ============================================== -->
+    <div id="modal-target-selector" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-sm bg-fantasy-surface border-2 border-amber-500/50 rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4">
+        <div class="text-center">
+          <span class="text-3xl" id="target-modal-icon">🎯</span>
+          <h3 id="target-modal-title" class="font-title text-base font-bold text-amber-300 mt-1">
+            Escolha seu Alvo
+          </h3>
+          <p id="target-modal-subtitle" class="text-xs text-slate-400 mt-0.5">
+            Selecione qual adversário receberá esta ação.
+          </p>
+        </div>
+
+        <div id="target-selector-list" class="space-y-2">
+          <!-- Botões de alvos preenchidos via JS -->
+        </div>
+
+        <button id="btn-cancel-target" class="w-full py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-medium hover:text-white">
+          Cancelar
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 3: ESCOLHA DE CARTA A SACRIFICAR         -->
+    <!-- ============================================== -->
+    <div id="modal-sacrifice" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-md bg-fantasy-surface border-2 border-red-500/60 rounded-2xl shadow-crimson-glow p-4 sm:p-5 space-y-4 text-center">
+        <span class="text-4xl">💥</span>
+        <div>
+          <h3 class="font-title text-base sm:text-lg font-bold text-red-400">
+            Perda de Identidade Arcana!
+          </h3>
+          <p class="text-xs text-slate-300 mt-1">
+            Seu blefe foi frustrado ou você foi atingido por um ataque letal. Escolha qual de suas cartas revelar e descartar:
+          </p>
+        </div>
+
+        <div id="sacrifice-card-choices" class="flex items-center justify-center gap-3 py-2">
+          <!-- Inserido dinamicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 4: TRANSFIGURAÇÃO DO ARQUIMAGO (TROCA)   -->
+    <!-- ============================================== -->
+    <div id="modal-exchange" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-lg bg-fantasy-surface border-2 border-purple-500/60 rounded-2xl shadow-arcane-glow p-4 sm:p-5 space-y-4">
+        <div class="text-center">
+          <span class="text-3xl">🧙‍♂️</span>
+          <h3 class="font-title text-base sm:text-lg font-bold text-purple-300">
+            Transfiguração do Arquimago
+          </h3>
+          <p class="text-xs text-slate-300 mt-0.5">
+            Você comprou 2 cartas do grimório. Selecione quais cartas deseja MANTER na sua mão. As demais retornarão ao fundo do baralho.
+          </p>
+        </div>
+
+        <div id="exchange-cards-container" class="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
+          <!-- Cartas para selecionar -->
+        </div>
+
+        <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+          <span id="exchange-selection-count" class="text-xs text-amber-300 font-semibold">
+            Selecionadas: 0 / 2
+          </span>
+          <button
+            id="btn-confirm-exchange"
+            disabled
+            class="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-title text-xs font-bold uppercase tracking-wider transition opacity-40 cursor-not-allowed"
+          >
+            Confirmar Troca
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 5: VISÃO DO ORÁCULO                      -->
+    <!-- ============================================== -->
+    <div id="modal-oracle-spy" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-sm bg-fantasy-surface border-2 border-pink-500/60 rounded-2xl shadow-arcane-glow p-4 sm:p-5 space-y-4 text-center">
+        <span class="text-4xl">🔮</span>
+        <div>
+          <h3 class="font-title text-base sm:text-lg font-bold text-pink-300">
+            Visão Profética Revelada
+          </h3>
+          <p class="text-xs text-slate-300 mt-0.5">
+            O Oráculo sussurrou a identidade oculta do seu adversário:
+          </p>
+        </div>
+
+        <div id="oracle-spied-card-display" class="flex justify-center py-2">
+          <!-- Card revelado -->
+        </div>
+
+        <button id="btn-close-oracle" class="w-full py-2.5 rounded-xl bg-pink-700 hover:bg-pink-600 text-white font-title text-xs font-bold uppercase tracking-wider">
+          Guardar Segredo & Concluir Turno
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 6: TELA DE VITÓRIA SUPREMA               -->
+    <!-- ============================================== -->
+    <div id="modal-victory" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3">
+      <div class="w-full max-w-md bg-gradient-to-b from-amber-950 via-fantasy-surface to-slate-950 border-2 border-amber-400 rounded-3xl shadow-gold-glow p-6 sm:p-8 text-center space-y-5 animate-float">
+        <div class="w-20 h-20 mx-auto rounded-full border-2 border-amber-400 bg-amber-500/20 flex items-center justify-center text-5xl filter drop-shadow">
+          👑
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-xs font-title font-bold text-amber-400 uppercase tracking-widest">
+            Fim do Duelo Arcano
+          </span>
+          <h2 id="victory-player-name" class="font-title text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-300">
+            Vencedor Lendário!
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300">
+            Todos os outros heróis tiveram suas identidades expostas ou caíram em combate. O reino da Aliança Arcana agora é seu!
+          </p>
+        </div>
+
+        <div class="pt-3">
+          <button
+            id="btn-return-lobby"
+            class="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-title text-sm font-bold uppercase tracking-wider shadow-lg transition transform hover:scale-105 active:scale-95"
+          >
+            Voltar ao Santuário Principal
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 7: CONFIGURAÇÃO DE CREDENCIAIS SUPABASE  -->
+    <!-- ============================================== -->
+    <div id="modal-supabase-config" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-md bg-fantasy-surface border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h3 class="font-title text-sm font-bold text-slate-200">
+            ⚙️ Conexão Supabase
+          </h3>
+          <button id="btn-close-db-config" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-300 leading-relaxed">
+          As credenciais podem ser definidas via arquivo <code class="text-amber-400">.env</code> (<code class="text-slate-400">VITE_SUPABASE_URL</code> e <code class="text-slate-400">VITE_SUPABASE_ANON_KEY</code>) ou inseridas manualmente abaixo para esta sessão:
+        </p>
+
+        <div class="space-y-3">
+          <div>
+            <label for="cfg-supabase-url" class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
+              Project URL
+            </label>
+            <input
+              id="cfg-supabase-url"
+              type="text"
+              placeholder="https://xyzcompany.supabase.co"
+              class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
+          <div>
+            <label for="cfg-supabase-key" class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
+              Anon Key
+            </label>
+            <input
+              id="cfg-supabase-key"
+              type="password"
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+              class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button id="btn-save-db-config" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-title text-xs font-bold uppercase">
+            Salvar & Recarregar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts da Aplicação -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
