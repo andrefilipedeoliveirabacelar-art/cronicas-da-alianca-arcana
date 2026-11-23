@@ -612,6 +612,59 @@ export const renderRulesModalHTML = () => {
         </table>
       </div>
 
+      <!-- Regras Especiais de Escala por Número de Jogadores (Estilo Coup) -->
+      <div class="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/40 space-y-2.5">
+        <div class="font-title font-bold text-purple-300 flex items-center gap-2 text-xs sm:text-sm">
+          <span>⚖️</span>
+          <span>Calibragem do Grimório por Quantidade de Jogadores (Estilo Coup)</span>
+        </div>
+        <p class="text-[11px] text-slate-300 leading-relaxed">
+          Para que o blefe e a dedução psicológica funcionem com precisão milimétrica, o tamanho do baralho é calibrado automaticamente com base no número de heróis na partida:
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
+            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
+              <span>⚔️ 2 Jogadores (Duelo Direto)</span>
+              <span class="font-mono text-purple-300">14 cartas</span>
+            </div>
+            <div class="text-slate-300">• <strong>2 cópias</strong> de cada arquétipo.</div>
+            <div class="text-slate-400 leading-tight">• <em>Blefe afiado:</em> Se você possui 2 cópias de uma carta, qualquer declaração dela pelo adversário é 100% blefe!</div>
+            <div class="text-amber-400 font-semibold">• O 1º jogador começa com 1 Runa e o 2º com 2 Runas (equilíbrio de iniciativa do Coup).</div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
+            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
+              <span>🛡️ 3 Jogadores (Triunvirato)</span>
+              <span class="font-mono text-purple-300">21 cartas</span>
+            </div>
+            <div class="text-slate-300">• <strong>3 cópias</strong> de cada arquétipo.</div>
+            <div class="text-slate-400 leading-tight">• Rotação dinâmica e contestações táticas.</div>
+            <div class="text-slate-400">• Todos os jogadores iniciam com 2 Runas.</div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
+            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
+              <span>👑 4 Jogadores (Quarteto Real)</span>
+              <span class="font-mono text-purple-300">28 cartas</span>
+            </div>
+            <div class="text-slate-300">• <strong>4 cópias</strong> de cada arquétipo.</div>
+            <div class="text-slate-400 leading-tight">• Blefes cruzados e bloqueios estratégicos entre guildas.</div>
+            <div class="text-slate-400">• Todos os jogadores iniciam com 2 Runas.</div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
+            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
+              <span>🔥 5 Jogadores (Conclave Arcano)</span>
+              <span class="font-mono text-purple-300">35 cartas</span>
+            </div>
+            <div class="text-slate-300">• Baralho completo com <strong>5 cópias</strong> de cada arquétipo.</div>
+            <div class="text-slate-400 leading-tight">• Caos absoluto, alianças temporárias e alta tensão!</div>
+            <div class="text-slate-400">• Todos os jogadores iniciam com 2 Runas.</div>
+          </div>
+        </div>
+      </div>
+
       <div class="p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs space-y-1.5">
         <div class="font-title font-bold text-amber-400">Ações Gerais (Sem Carta Necessária)</div>
         <div>• <strong>Coletar 1 Runa:</strong> Ganha +1 Runa sem risco de contestação ou bloqueio.</div>

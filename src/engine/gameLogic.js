@@ -248,7 +248,7 @@ export const joinRoom = async (roomCode, nickname, avatarTheme = 'guerreiro') =>
   return { room, player };
 };
 
-// 3. INICIAR PARTIDA (Apenas Host, Mínimo 2 jogadores)
+// 3. INICIAR PARTIDA (Apenas Host, Mínimo 2 e Máximo 5 jogadores)
 export const startGame = async (roomId) => {
   const { data: players, error: pError } = await supabase
     .from('players')
@@ -260,10 +260,19 @@ export const startGame = async (roomId) => {
     throw new Error('A partida precisa de pelo menos 2 guerreiros para iniciar.');
   }
 
-  // Monta baralho de 18 cartas (3 cópias de cada código)
+  const playerCount = players.length;
+
+  // Calibragem dinâmica do baralho baseada nas regras oficiais do Coup:
+  // Para que o blefe e a contagem de cartas funcionem com perfeição:
+  // - 2 Jogadores: 2 cópias de cada carta (14 cartas no total)
+  // - 3 Jogadores: 3 cópias de cada carta (21 cartas no total)
+  // - 4 Jogadores: 4 cópias de cada carta (28 cartas no total)
+  // - 5 Jogadores: 5 cópias de cada carta (35 cartas no total)
+  const copiesPerCard = Math.min(5, Math.max(2, playerCount));
+
   let rawDeck = [];
   CARD_CATALOG.forEach((card) => {
-    for (let i = 0; i < card.copies_in_deck; i++) {
+    for (let i = 0; i < copiesPerCard; i++) {
       rawDeck.push(card.code);
     }
   });
@@ -297,6 +306,15 @@ export const startGame = async (roomId) => {
   const { error: handError } = await supabase.from('player_hands').insert(handInserts);
   if (handError) throw new Error(`Erro ao distribuir cartas: ${handError.message}`);
 
+  // Regra Oficial Coup para 2 Jogadores:
+  // O Jogador 1 (que joga primeiro) inicia com 1 Runa para equilibrar a iniciativa;
+  // O Jogador 2 inicia com 2 Runas.
+  // Para 3 a 5 jogadores, todos iniciam com 2 Runas.
+  if (playerCount === 2) {
+    await supabase.from('players').update({ runes: 1 }).eq('id', players[0].id);
+    await supabase.from('players').update({ runes: 2 }).eq('id', players[1].id);
+  }
+
   // Primeiro jogador a jogar
   const firstPlayer = players[0];
 
@@ -315,7 +333,12 @@ export const startGame = async (roomId) => {
 
   if (roomUpdateError) throw new Error(`Erro ao iniciar sala: ${roomUpdateError.message}`);
 
-  await addGameLog(roomId, firstPlayer.nickname, 'SYSTEM', `O duelo começou! As cartas foram seladas. Vez de ${firstPlayer.nickname}.`);
+  await addGameLog(
+    roomId,
+    firstPlayer.nickname,
+    'SYSTEM',
+    `⚔️ Duelo iniciado com ${playerCount} jogadores! Grimório calibrado com ${rawDeck.length} cartas (${copiesPerCard} de cada arquétipo). Vez de ${firstPlayer.nickname}.`
+  );
 };
 
 // Rotação de Turno
