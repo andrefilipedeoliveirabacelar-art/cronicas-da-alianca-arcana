@@ -30,6 +30,25 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <!-- Botão Mute / Efeitos Sonoros -->
+        <button
+          id="btn-toggle-sound"
+          class="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-xs transition shadow-sm"
+          title="Ativar/Desativar Efeitos Sonoros"
+        >
+          🔊
+        </button>
+
+        <!-- Botão Cola Rápida -->
+        <button
+          id="btn-quick-cheat"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-title text-xs font-semibold shadow-sm transition transform active:scale-95"
+          title="Tabela de Consulta Rápida"
+        >
+          <span>📖</span>
+          <span class="hidden sm:inline">Cola Rápida</span>
+        </button>
+
         <!-- Botão Salão da Glória & Ranking -->
         <button
           id="btn-open-ranking"
@@ -47,7 +66,7 @@
           title="Ver Tabela de Regras e Habilidades"
         >
           <span>📜</span>
-          <span class="hidden sm:inline">Grimório de Regras</span>
+          <span class="hidden sm:inline">Grimório</span>
         </button>
 
         <!-- Botão Configurar Supabase -->
@@ -229,11 +248,19 @@
               🚪 Abandonar Aliança
             </button>
 
-            <div id="host-start-container">
+            <div id="host-start-container" class="flex flex-wrap items-center gap-2">
+              <button
+                id="btn-add-bot"
+                class="px-4 py-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 font-title text-xs font-bold tracking-wider uppercase transition shadow-sm flex items-center gap-1.5 active:scale-95"
+                title="Adicionar um jogador bot controlado por IA"
+              >
+                <span>🤖</span>
+                <span>+ Invocar Bot Arcano</span>
+              </button>
               <button
                 id="btn-start-game"
                 disabled
-                class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-sm font-bold shadow-gold-glow tracking-wider uppercase transition opacity-40 cursor-not-allowed"
+                class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-xs sm:text-sm font-bold shadow-gold-glow tracking-wider uppercase transition opacity-40 cursor-not-allowed"
               >
                 ⚔️ Iniciar Partida (Mín. 2)
               </button>
@@ -248,8 +275,24 @@
       <!-- ============================================== -->
       <!-- TELA 2: MESA DE JOGO (BATALHA REALTIME)        -->
       <!-- ============================================== -->
-      <section id="screen-mesa" class="hidden flex-1 flex flex-col justify-between space-y-3 pb-2">
+      <section id="screen-mesa" class="hidden flex-1 flex flex-col justify-between space-y-3 pb-2 relative">
         
+        <!-- BANNER DE SELEÇÃO DIRETA DE ALVO NA MESA -->
+        <div id="banner-target-selection" class="hidden w-full bg-amber-500/20 border-2 border-amber-400 rounded-xl p-2.5 flex items-center justify-between shadow-gold-glow animate-pulse">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🎯</span>
+            <span id="target-selection-text" class="font-title text-xs sm:text-sm font-bold text-amber-300">
+              Selecione um oponente na mesa para aplicar a ação
+            </span>
+          </div>
+          <button
+            id="btn-cancel-target-selection"
+            class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-600 transition"
+          >
+            ✕ Cancelar
+          </button>
+        </div>
+
         <!-- BARRA SUPERIOR DA MESA: OPONENTES -->
         <div class="w-full">
           <div class="flex items-center justify-between px-2 py-1 text-xs text-slate-400">
@@ -315,6 +358,26 @@
             <div class="flex items-center gap-3" id="local-player-cards">
               <!-- Inserido dinamicamente via renderMesa.js -->
             </div>
+          </div>
+
+          <!-- Barra de Provocações Rápidas (Emotes & Falas) -->
+          <div id="mesa-emote-bar" class="flex items-center justify-center gap-1 sm:gap-2 py-1 overflow-x-auto border-b border-slate-800/80 pb-2">
+            <span class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider hidden sm:inline mr-1">Provocações:</span>
+            <button type="button" data-emote="👀 Sei que é mentira..." class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
+              👀 Mentira...
+            </button>
+            <button type="button" data-emote="🤝 Trégua por agora?" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
+              🤝 Trégua?
+            </button>
+            <button type="button" data-emote="😇 Pode confiar em mim" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
+              😇 Confie em mim
+            </button>
+            <button type="button" data-emote="🔥 Vai encarar?" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
+              🔥 Vai encarar?
+            </button>
+            <button type="button" data-emote="💀 Erro fatal!" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
+              💀 Erro fatal!
+            </button>
           </div>
 
           <!-- Barra de Ações do Turno -->
@@ -495,10 +558,18 @@
           </p>
         </div>
 
-        <div class="pt-3">
+        <div class="pt-3 space-y-2">
+          <!-- Botão Revanche Instantânea (Host) -->
+          <button
+            id="btn-rematch-same-room"
+            class="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-sm font-bold uppercase tracking-wider shadow-gold-glow transition transform hover:scale-105 active:scale-95"
+          >
+            ⚔️ Jogar Novamente (Mesma Sala)
+          </button>
+          
           <button
             id="btn-return-lobby"
-            class="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-title text-sm font-bold uppercase tracking-wider shadow-lg transition transform hover:scale-105 active:scale-95"
+            class="w-full py-2.5 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-semibold uppercase tracking-wider transition"
           >
             Voltar ao Santuário Principal
           </button>
@@ -583,6 +654,27 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- DRAWER RETRÁTIL: COLA RÁPIDA DE HABILIDADES    -->
+    <!-- ============================================== -->
+    <div id="drawer-quick-cheat" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-fantasy-surface/95 border-l-2 border-amber-500/50 shadow-2xl p-4 flex flex-col backdrop-blur-md">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📖</span>
+          <h3 class="font-title text-sm font-bold text-amber-300">Cola Rápida das Cartas</h3>
+        </div>
+        <button id="btn-close-quick-cheat" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
+      </div>
+      <div id="quick-cheat-content" class="flex-1 overflow-y-auto pr-1 text-xs space-y-2">
+        <!-- Inserido dinamicamente via renderMesa.js -->
+      </div>
+    </div>
+
+    <!-- BANNER TOAST ÉPICO (CENTRAL / TOP) -->
+    <div id="epic-action-toast" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[90%] px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-950 via-slate-900 to-purple-950 border-2 border-amber-400 text-center shadow-gold-glow pointer-events-none transition-all duration-300">
+      <div id="epic-action-toast-text" class="font-title text-xs sm:text-sm font-bold text-amber-200"></div>
     </div>
 
     <!-- Scripts da Aplicação -->

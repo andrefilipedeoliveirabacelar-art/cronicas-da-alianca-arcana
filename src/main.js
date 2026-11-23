@@ -4,6 +4,7 @@ import {
   createRoom,
   joinRoom,
   startGame,
+  rematchGame,
   actCollect1,
   actEpicStrike,
   declareAction,
@@ -16,7 +17,9 @@ import {
   getCardByCode,
   CARD_CATALOG,
 } from './engine/gameLogic.js';
-import { subscribeToRoom, unsubscribeFromRoom } from './engine/realtime.js';
+import { subscribeToRoom, unsubscribeFromRoom, broadcastEmote } from './engine/realtime.js';
+import { soundManager } from './lib/soundFX.js';
+import { addBotToRoom, isPlayerBot, botAI } from './engine/botAI.js';
 import {
   renderLocalCardHTML,
   renderOpponentsHTML,
@@ -25,6 +28,7 @@ import {
   renderLogsHTML,
   renderRulesModalHTML,
   renderRankingModalHTML,
+  renderQuickCheatDrawerHTML,
   getAvatarIcon,
 } from './ui/renderMesa.js';
 import {
@@ -41,7 +45,9 @@ const state = {
   currentHands: [],
   currentLogs: [],
   selectedAvatar: 'mago',
-  pendingTargetAction: null, // Guarda a ação aguardando escolha de alvo
+  isSelectingTarget: false,
+  pendingTargetCallback: null,
+  selectingActionLabel: '',
   exchangeSelectedCards: [],
   rankingActiveTab: 'leaderboard',
 };
@@ -51,6 +57,13 @@ const DOM = {
   // Telas
   screenLobby: document.getElementById('screen-lobby'),
   screenMesa: document.getElementById('screen-mesa'),
+
+  // Header Controles
+  btnToggleSound: document.getElementById('btn-toggle-sound'),
+  btnQuickCheat: document.getElementById('btn-quick-cheat'),
+  drawerQuickCheat: document.getElementById('drawer-quick-cheat'),
+  btnCloseQuickCheat: document.getElementById('btn-close-quick-cheat'),
+  quickCheatContent: document.getElementById('quick-cheat-content'),
 
   // Lobby
   inputNickname: document.getElementById('input-nickname'),
@@ -66,6 +79,7 @@ const DOM = {
   playerCountBadge: document.getElementById('player-count-badge'),
   lobbyPlayersList: document.getElementById('lobby-players-list'),
   hostStartContainer: document.getElementById('host-start-container'),
+  btnAddBot: document.getElementById('btn-add-bot'),
   btnStartGame: document.getElementById('btn-start-game'),
   guestWaitingText: document.getElementById('guest-waiting-text'),
   btnLeaveLobby: document.getElementById('btn-leave-lobby'),
@@ -75,6 +89,9 @@ const DOM = {
   // Mesa
   mesaRoomCode: document.getElementById('mesa-room-code'),
   mesaPhaseIndicator: document.getElementById('mesa-phase-indicator'),
+  bannerTargetSelection: document.getElementById('banner-target-selection'),
+  targetSelectionText: document.getElementById('target-selection-text'),
+  btnCancelTargetSelection: document.getElementById('btn-cancel-target-selection'),
   mesaOpponentsContainer: document.getElementById('mesa-opponents-container'),
   mesaAltarContainer: document.getElementById('mesa-altar-container'),
   localPlayerAvatar: document.getElementById('local-player-avatar'),
@@ -120,6 +137,7 @@ const DOM = {
 
   modalVictory: document.getElementById('modal-victory'),
   victoryPlayerName: document.getElementById('victory-player-name'),
+  btnRematchSameRoom: document.getElementById('btn-rematch-same-room'),
   btnReturnLobby: document.getElementById('btn-return-lobby'),
 
   modalDbConfig: document.getElementById('modal-supabase-config'),
@@ -234,6 +252,48 @@ const loadInitialRoomData = async (roomId) => {
 };
 
 // ==========================================
+// TOAST ÉPICO CENTRAL & BALÕES DE FALA
+// ==========================================
+let toastTimer = null;
+const showEpicActionToast = (message, type = 'info', shake = false) => {
+  const toast = document.getElementById('epic-action-toast');
+  const text = document.getElementById('epic-action-toast-text');
+  if (!toast || !text) return;
+
+  text.innerHTML = message;
+  toast.classList.remove('hidden');
+
+  if (shake) {
+    DOM.screenMesa.classList.add('animate-shake');
+    setTimeout(() => {
+      DOM.screenMesa.classList.remove('animate-shake');
+    }, 600);
+  }
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.add('hidden');
+    toastTimer = null;
+  }, 3500);
+};
+
+const showSpeechBubble = (playerId, text) => {
+  const bubble = document.getElementById(`speech-bubble-${playerId}`);
+  if (bubble) {
+    bubble.textContent = text;
+    bubble.classList.remove('hidden');
+    soundManager.playEmotePop();
+
+    clearTimeout(bubble._timer);
+    bubble._timer = setTimeout(() => {
+      bubble.classList.add('hidden');
+    }, 3500);
+  }
+};
+
+let lastLocalRunes = null;
+
+// ==========================================
 // INSCRIÇÃO EM TEMPO REAL
 // ==========================================
 const attachRealtimeListeners = (roomId) => {
@@ -258,7 +318,13 @@ const attachRealtimeListeners = (roomId) => {
       state.currentPlayers = newPlayers;
       if (state.currentPlayer) {
         const updatedSelf = newPlayers.find((p) => p.id === state.currentPlayer.id);
-        if (updatedSelf) state.currentPlayer = updatedSelf;
+        if (updatedSelf) {
+          if (lastLocalRunes !== null && updatedSelf.runes > lastLocalRunes) {
+            soundManager.playRuneGain();
+          }
+          lastLocalRunes = updatedSelf.runes;
+          state.currentPlayer = updatedSelf;
+        }
       }
       updateLobbyUI();
       updateMesaUI();
@@ -272,6 +338,30 @@ const attachRealtimeListeners = (roomId) => {
     onLogAdded: (newLog) => {
       state.currentLogs.push(newLog);
       renderLogItem(newLog);
+
+      // Feedback Épico e Sons com base no evento
+      const msg = newLog.message || '';
+      if (newLog.event_type === 'BLUFF_CALL') {
+        const isLoss = msg.includes('PEGO NO BLEFE') || msg.includes('falhou no julgamento');
+        if (isLoss) {
+          soundManager.playCardLoss();
+          showEpicActionToast(msg, 'bluff', true);
+        } else {
+          showEpicActionToast(msg, 'bluff', false);
+        }
+      } else if (newLog.event_type === 'ELIMINATED') {
+        soundManager.playCardLoss();
+        showEpicActionToast(msg, 'eliminated', true);
+      } else if (newLog.event_type === 'ACTION' && (msg.includes('GOLPE ÉPICO') || msg.includes('Fúria Olímpica'))) {
+        soundManager.playCardLoss();
+        showEpicActionToast(msg, 'strike', true);
+      } else if (newLog.event_type === 'ACTION' || newLog.event_type === 'BLOCK') {
+        showEpicActionToast(msg, 'action', false);
+      }
+    },
+
+    onEmoteReceived: ({ playerId, emoteText }) => {
+      showSpeechBubble(playerId, emoteText);
     },
   });
 };
@@ -365,17 +455,46 @@ const updateMesaUI = () => {
   DOM.mesaRoomCode.textContent = room.code;
   DOM.mesaPhaseIndicator.textContent = `Fase: ${room.turn_phase.replace('_', ' ').toUpperCase()}`;
 
-  // Oponentes
+  // Oponentes (com suporte a seleção direta na mesa)
   DOM.mesaOpponentsContainer.innerHTML = renderOpponentsHTML(
     state.currentPlayers,
     state.currentHands,
     room.current_turn_player_id,
-    myId
+    myId,
+    state.isSelectingTarget,
+    state.selectingActionLabel
   );
+  attachOpponentsTargetEvents();
 
   // Altar Central (Ações, Contestações e Bloqueios)
   DOM.mesaAltarContainer.innerHTML = renderCenterAltarHTML(room, myId, state.currentPlayers);
   attachAltarEventListeners();
+
+  // Gerenciamento dos Temporizadores Anti-Trava
+  if (room.status === 'playing') {
+    if (room.turn_phase === 'action') {
+      stopReactionTimer();
+      startActionTimer();
+    } else if (room.turn_phase === 'challenge_window' || room.turn_phase === 'block_window') {
+      stopActionTimer();
+      const rKey = `${room.turn_phase}_${room.pending_action?.actor_id}_${room.pending_action?.action_code}_${room.pending_action?.blocked_by_id || ''}`;
+      startReactionTimer(rKey);
+    } else {
+      stopActionTimer();
+      stopReactionTimer();
+    }
+  } else {
+    stopActionTimer();
+    stopReactionTimer();
+  }
+
+  // Avaliação da Inteligência Artificial dos Bots
+  botAI.evaluate({
+    room,
+    players: state.currentPlayers,
+    hands: state.currentHands,
+    isHost: state.currentPlayer?.is_host,
+  });
 
   // Reino do Jogador Local
   DOM.localPlayerAvatar.textContent = getAvatarIcon(state.currentPlayer.avatar_theme);
@@ -425,6 +544,189 @@ const renderLogItem = (log) => {
   DOM.mesaLogsContainer.innerHTML = renderLogsHTML(state.currentLogs);
   DOM.mesaLogsContainer.scrollTop = DOM.mesaLogsContainer.scrollHeight;
 };
+
+// ==========================================
+// GERENCIADOR DE TEMPORIZADORES ANTI-TRAVA
+// ==========================================
+let actionTimerInterval = null;
+let actionTimeRemaining = 25;
+
+let reactionTimerInterval = null;
+let reactionTimeRemaining = 10;
+let lastReactionKey = null;
+
+const startActionTimer = () => {
+  stopActionTimer();
+  actionTimeRemaining = 25;
+
+  const updateBar = () => {
+    const bar = document.getElementById('action-timer-bar');
+    const text = document.getElementById('action-timer-seconds');
+    if (bar) bar.style.width = `${(actionTimeRemaining / 25) * 100}%`;
+    if (text) text.textContent = `${actionTimeRemaining}s`;
+  };
+
+  updateBar();
+
+  actionTimerInterval = setInterval(async () => {
+    actionTimeRemaining -= 1;
+    updateBar();
+
+    if (actionTimeRemaining <= 5 && actionTimeRemaining > 0) {
+      soundManager.playTimerTick();
+    }
+
+    if (actionTimeRemaining <= 0) {
+      stopActionTimer();
+      // Anti-trava: se for meu turno, executa ação padrão de +1 runa
+      const isMyTurn = state.currentRoom?.current_turn_player_id === state.currentPlayer?.id;
+      const isHost = state.currentPlayer?.is_host;
+      const currentTurnPlayer = state.currentPlayers.find((p) => p.id === state.currentRoom?.current_turn_player_id);
+      const isTurnPlayerBot = isPlayerBot(currentTurnPlayer);
+
+      if (isMyTurn && state.currentPlayer?.is_alive) {
+        showToast('Tempo esgotado! Coletando +1 Runa automaticamente.', 'warning');
+        try {
+          await actCollect1(state.currentRoom.id, state.currentPlayer);
+        } catch (e) {
+          console.error(e);
+        }
+      } else if (isHost && isTurnPlayerBot && currentTurnPlayer?.is_alive) {
+        try {
+          await actCollect1(state.currentRoom.id, currentTurnPlayer);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, 1000);
+};
+
+const stopActionTimer = () => {
+  if (actionTimerInterval) {
+    clearInterval(actionTimerInterval);
+    actionTimerInterval = null;
+  }
+};
+
+const startReactionTimer = (key) => {
+  if (lastReactionKey === key && reactionTimerInterval) return;
+  stopReactionTimer();
+  lastReactionKey = key;
+  reactionTimeRemaining = 10;
+  soundManager.playAlertTension();
+
+  const updateBar = () => {
+    const bar = document.getElementById('reaction-timer-bar');
+    const text = document.getElementById('reaction-timer-seconds');
+    if (bar) bar.style.width = `${(reactionTimeRemaining / 10) * 100}%`;
+    if (text) text.textContent = `${reactionTimeRemaining}s`;
+  };
+
+  updateBar();
+
+  reactionTimerInterval = setInterval(async () => {
+    reactionTimeRemaining -= 1;
+    updateBar();
+
+    if (reactionTimeRemaining <= 5 && reactionTimeRemaining > 0) {
+      soundManager.playTimerTick();
+    }
+
+    if (reactionTimeRemaining <= 0) {
+      stopReactionTimer();
+      // Anti-trava: o Host da sala resolve automaticamente aceitando/passando a ação
+      const isHost = state.currentPlayer?.is_host;
+      if (isHost && state.currentRoom && (state.currentRoom.turn_phase === 'challenge_window' || state.currentRoom.turn_phase === 'block_window')) {
+        try {
+          await acceptAction(state.currentRoom.id, state.currentPlayer);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, 1000);
+};
+
+const stopReactionTimer = () => {
+  if (reactionTimerInterval) {
+    clearInterval(reactionTimerInterval);
+    reactionTimerInterval = null;
+  }
+};
+
+// ==========================================
+// SELEÇÃO DIRETA DE ALVO NA MESA (ZERO MODAIS)
+// ==========================================
+const startDirectTargetSelection = ({ actionLabel, onSelect }) => {
+  const validTargets = state.currentPlayers.filter(
+    (p) => p.id !== state.currentPlayer.id && p.is_alive
+  );
+
+  if (validTargets.length === 0) {
+    showToast('Não há oponentes vivos disponíveis para alvejar!', 'warning');
+    return;
+  }
+
+  state.isSelectingTarget = true;
+  state.pendingTargetCallback = onSelect;
+  state.selectingActionLabel = actionLabel;
+
+  DOM.targetSelectionText.textContent = `🎯 Selecione um oponente na mesa para aplicar ${actionLabel}`;
+  DOM.bannerTargetSelection.classList.remove('hidden');
+
+  DOM.mesaOpponentsContainer.innerHTML = renderOpponentsHTML(
+    state.currentPlayers,
+    state.currentHands,
+    state.currentRoom.current_turn_player_id,
+    state.currentPlayer.id,
+    true,
+    actionLabel
+  );
+  attachOpponentsTargetEvents();
+};
+
+const cancelDirectTargetSelection = () => {
+  state.isSelectingTarget = false;
+  state.pendingTargetCallback = null;
+  state.selectingActionLabel = '';
+  DOM.bannerTargetSelection.classList.add('hidden');
+
+  DOM.mesaOpponentsContainer.innerHTML = renderOpponentsHTML(
+    state.currentPlayers,
+    state.currentHands,
+    state.currentRoom.current_turn_player_id,
+    state.currentPlayer.id,
+    false
+  );
+  attachOpponentsTargetEvents();
+};
+
+const attachOpponentsTargetEvents = () => {
+  const opponentSlots = DOM.mesaOpponentsContainer.querySelectorAll('[data-target-player-id]');
+  opponentSlots.forEach((slot) => {
+    slot.onclick = async () => {
+      if (!state.isSelectingTarget || !state.pendingTargetCallback) return;
+
+      const targetId = slot.getAttribute('data-target-player-id');
+      const target = state.currentPlayers.find((p) => p.id === targetId);
+
+      if (target && target.is_alive) {
+        const callback = state.pendingTargetCallback;
+        cancelDirectTargetSelection();
+        try {
+          await callback(target);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    };
+  });
+};
+
+if (DOM.btnCancelTargetSelection) {
+  DOM.btnCancelTargetSelection.onclick = cancelDirectTargetSelection;
+}
 
 // ==========================================
 // EVENT LISTENERS DO ALTAR CENTRAL
@@ -511,14 +813,12 @@ const attachActionBarEventListeners = () => {
     };
   }
 
-  // 3. Golpe Épico (-7 Runas)
+  // 3. Golpe Épico (-7 Runas) -> Seleção Direta na Mesa
   const btnEpicStrike = document.getElementById('btn-act-epic-strike');
   if (btnEpicStrike) {
     btnEpicStrike.onclick = () => {
-      openTargetSelector({
-        title: 'Desferir Golpe Épico',
-        icon: '⚡',
-        subtitle: 'Escolha um adversário para destruir 1 identidade oculta.',
+      startDirectTargetSelection({
+        actionLabel: 'Golpe Épico (-7💎)',
         onSelect: async (target) => {
           await actEpicStrike(roomId, player, target);
         },
@@ -538,14 +838,12 @@ const attachActionBarEventListeners = () => {
     };
   }
 
-  // 5. Manto Élfico / Roubar (Portador do Anel)
+  // 5. Manto Élfico / Roubar (Portador do Anel) -> Seleção Direta na Mesa
   const btnSteal = document.getElementById('btn-act-steal');
   if (btnSteal) {
     btnSteal.onclick = () => {
-      openTargetSelector({
-        title: 'Manto Élfico (Roubo)',
-        icon: '💍',
-        subtitle: 'Escolha um guerreiro para subtrair até 2 Runas.',
+      startDirectTargetSelection({
+        actionLabel: 'Manto Élfico (Roubo)',
         onSelect: async (target) => {
           await declareAction(roomId, player, 'STEAL', target);
         },
@@ -553,14 +851,12 @@ const attachActionBarEventListeners = () => {
     };
   }
 
-  // 6. Fúria Olímpica / Assassinar (Semideus)
+  // 6. Fúria Olímpica / Assassinar (Semideus) -> Seleção Direta na Mesa
   const btnAssassinate = document.getElementById('btn-act-assassinate');
   if (btnAssassinate) {
     btnAssassinate.onclick = () => {
-      openTargetSelector({
-        title: 'Fúria Olímpica (-3 Runas)',
-        icon: '⚡',
-        subtitle: 'Escolha um alvo para receber o golpe mortal.',
+      startDirectTargetSelection({
+        actionLabel: 'Fúria Olímpica (-3💎)',
         onSelect: async (target) => {
           await declareAction(roomId, player, 'ASSASSINATE', target);
         },
@@ -592,14 +888,12 @@ const attachActionBarEventListeners = () => {
     };
   }
 
-  // 9. Profecia Arcana (Oráculo)
+  // 9. Profecia Arcana (Oráculo) -> Seleção Direta na Mesa
   const btnOracle = document.getElementById('btn-act-oracle');
   if (btnOracle) {
     btnOracle.onclick = () => {
-      openTargetSelector({
-        title: 'Profecia Arcana',
-        icon: '🔮',
-        subtitle: 'Escolha um adversário para espiar 1 de suas cartas ocultas.',
+      startDirectTargetSelection({
+        actionLabel: 'Profecia Arcana (Espiar)',
         onSelect: async (target) => {
           await declareAction(roomId, player, 'DIVINATION', target);
         },
@@ -832,6 +1126,19 @@ const triggerVictoryScreen = (winnerPlayerId) => {
   const winner = state.currentPlayers.find((p) => p.id === winnerPlayerId);
   DOM.victoryPlayerName.textContent = winner ? `${winner.nickname} Conquistou a Glória!` : 'Glória Arcana!';
 
+  // Toca fanfarra de vitória
+  soundManager.playVictoryFanfare();
+
+  // Exibe botão de revanche apenas se for o Host
+  const isHost = state.currentPlayer?.is_host;
+  if (DOM.btnRematchSameRoom) {
+    if (isHost) {
+      DOM.btnRematchSameRoom.classList.remove('hidden');
+    } else {
+      DOM.btnRematchSameRoom.classList.add('hidden');
+    }
+  }
+
   DOM.modalVictory.classList.remove('hidden');
 
   // Chuva de confetes dourados e púrpuras
@@ -861,6 +1168,27 @@ const triggerVictoryScreen = (winnerPlayerId) => {
   frame();
 };
 
+// Revanche Instantânea na Mesma Sala
+if (DOM.btnRematchSameRoom) {
+  DOM.btnRematchSameRoom.onclick = async () => {
+    if (!state.currentRoom) return;
+
+    DOM.btnRematchSameRoom.disabled = true;
+    DOM.btnRematchSameRoom.textContent = 'Embaralhando Grimório...';
+
+    try {
+      await rematchGame(state.currentRoom.id);
+      DOM.modalVictory.classList.add('hidden');
+      showToast('⚔️ A revanche começou! Novos grimórios foram distribuídos.', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      DOM.btnRematchSameRoom.disabled = false;
+      DOM.btnRematchSameRoom.textContent = '⚔️ Jogar Novamente (Mesma Sala)';
+    }
+  };
+}
+
 DOM.btnReturnLobby.onclick = () => {
   DOM.modalVictory.classList.add('hidden');
   clearSession();
@@ -871,8 +1199,82 @@ DOM.btnReturnLobby.onclick = () => {
 };
 
 // ==========================================
+// CONTROLES DO CABEÇALHO (SOM & COLA RÁPIDA)
+// ==========================================
+if (DOM.btnToggleSound) {
+  DOM.btnToggleSound.textContent = soundManager.isMuted ? '🔇' : '🔊';
+  DOM.btnToggleSound.onclick = () => {
+    const isMuted = soundManager.toggleMute();
+    DOM.btnToggleSound.textContent = isMuted ? '🔇' : '🔊';
+    showToast(isMuted ? 'Efeitos sonoros desativados' : 'Efeitos sonoros ativados', 'info');
+  };
+}
+
+if (DOM.btnQuickCheat) {
+  DOM.btnQuickCheat.onclick = () => {
+    DOM.quickCheatContent.innerHTML = renderQuickCheatDrawerHTML();
+    DOM.drawerQuickCheat.classList.toggle('hidden');
+  };
+}
+
+if (DOM.btnCloseQuickCheat) {
+  DOM.btnCloseQuickCheat.onclick = () => {
+    DOM.drawerQuickCheat.classList.add('hidden');
+  };
+}
+
+// ==========================================
+// PROVOCAÇÕES RÁPIDAS (EMOTES)
+// ==========================================
+let emoteCooldown = false;
+const setupEmoteButtons = () => {
+  const emoteButtons = document.querySelectorAll('.btn-emote');
+  emoteButtons.forEach((btn) => {
+    btn.onclick = () => {
+      if (emoteCooldown || !state.currentRoom || !state.currentPlayer) return;
+
+      const emote = btn.getAttribute('data-emote');
+      emoteCooldown = true;
+
+      // Mostra sobre si mesmo localmente
+      showSpeechBubble(state.currentPlayer.id, emote);
+
+      // Transmite via Supabase Realtime broadcast
+      broadcastEmote(
+        state.currentRoom.id,
+        state.currentPlayer.id,
+        state.currentPlayer.nickname,
+        emote
+      );
+
+      // Cooldown de 3 segundos
+      setTimeout(() => {
+        emoteCooldown = false;
+      }, 3000);
+    };
+  });
+};
+
+// ==========================================
 // EVENT LISTENERS DO LOBBY
 // ==========================================
+
+// Invocar Bot Arcano (Host)
+if (DOM.btnAddBot) {
+  DOM.btnAddBot.onclick = async () => {
+    if (!state.currentRoom) return;
+
+    DOM.btnAddBot.disabled = true;
+    try {
+      await addBotToRoom(state.currentRoom.id, state.currentPlayers);
+      showToast('🤖 Bot Arcano invocado para o conclave!', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      DOM.btnAddBot.disabled = false;
+    }
+  };
+}
 
 // Seletor de Avatar
 DOM.avatarSelector.querySelectorAll('.avatar-opt').forEach((btn) => {
@@ -1100,6 +1502,9 @@ DOM.btnSaveDbConfig.onclick = () => {
 // INICIALIZAÇÃO DA APLICAÇÃO
 // ==========================================
 const initApp = async () => {
+  // Configura botões de provocação
+  setupEmoteButtons();
+
   // Verifica credenciais do Supabase
   if (!hasValidCredentials()) {
     DOM.lobbySupabaseNotice?.classList.remove('hidden');

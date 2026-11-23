@@ -55,3 +55,30 @@
   box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.25);
   border-color: rgba(245, 158, 11, 0.7);
 }
+
+/* Screen Shake Animation on Card Destruction */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-4px, 3px) rotate(-1deg); }
+  40% { transform: translate(4px, -3px) rotate(1deg); }
+  60% { transform: translate(-3px, -2px) rotate(0deg); }
+  80% { transform: translate(3px, 2px) rotate(1deg); }
+}
+
+.animate-shake {
+  animation: screenShake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* Speech Bubble Tip */
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: rgba(139, 92, 246, 0.9) transparent;
+  display: block;
+  width: 0;
+}

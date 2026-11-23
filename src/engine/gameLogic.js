@@ -341,6 +341,89 @@ export const startGame = async (roomId) => {
   );
 };
 
+// 4. REVANCHE INSTANTÂNEA NA MESMA SALA
+export const rematchGame = async (roomId) => {
+  const { data: players, error: pError } = await supabase
+    .from('players')
+    .select('*')
+    .eq('room_id', roomId)
+    .order('seat_order', { ascending: true });
+
+  if (pError || !players || players.length < 2) {
+    throw new Error('Mínimo de 2 guerreiros para a revanche.');
+  }
+
+  // Remove cartas anteriores
+  await supabase.from('player_hands').delete().eq('room_id', roomId);
+
+  const playerCount = players.length;
+  const copiesPerCard = Math.min(5, Math.max(2, playerCount));
+
+  let rawDeck = [];
+  CARD_CATALOG.forEach((card) => {
+    for (let i = 0; i < copiesPerCard; i++) {
+      rawDeck.push(card.code);
+    }
+  });
+
+  const shuffledDeck = shuffleArray(rawDeck);
+
+  // Distribui 2 novas cartas para cada participante
+  const handInserts = [];
+  players.forEach((player) => {
+    const card1 = shuffledDeck.pop();
+    const card2 = shuffledDeck.pop();
+
+    handInserts.push({
+      room_id: roomId,
+      player_id: player.id,
+      card_code: card1,
+      slot_index: 1,
+      is_revealed: false,
+    });
+
+    handInserts.push({
+      room_id: roomId,
+      player_id: player.id,
+      card_code: card2,
+      slot_index: 2,
+      is_revealed: false,
+    });
+  });
+
+  await supabase.from('player_hands').insert(handInserts);
+
+  // Restaura vida e runas de todos
+  for (let i = 0; i < players.length; i++) {
+    const startRunes = (playerCount === 2 && i === 0) ? 1 : 2;
+    await supabase
+      .from('players')
+      .update({ is_alive: true, runes: startRunes })
+      .eq('id', players[i].id);
+  }
+
+  const firstPlayer = players[0];
+
+  await supabase
+    .from('rooms')
+    .update({
+      status: 'playing',
+      turn_phase: 'action',
+      current_turn_player_id: firstPlayer.id,
+      deck: shuffledDeck,
+      pending_action: null,
+      winner_player_id: null,
+    })
+    .eq('id', roomId);
+
+  await addGameLog(
+    roomId,
+    'Santuário',
+    'SYSTEM',
+    `⚔️ A REVANCHE ARCANA COMEÇOU! Todos os heróis retornaram à vida com novos grimórios. Vez de ${firstPlayer.nickname}.`
+  );
+};
+
 // Rotação de Turno
 export const advanceTurn = async (roomId) => {
   // Busca todos os jogadores da sala ordenados por assento

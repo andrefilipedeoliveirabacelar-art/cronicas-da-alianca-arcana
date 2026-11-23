@@ -92,6 +92,16 @@ export const subscribeToRoom = (roomId, callbacks = {}) => {
           callbacks.onLogAdded(payload.new);
         }
       }
+    )
+    // 5. Escuta Provocações e Emotes via Broadcast em tempo real
+    .on(
+      'broadcast',
+      { event: 'player_emote' },
+      (payload) => {
+        if (callbacks.onEmoteReceived && payload.payload) {
+          callbacks.onEmoteReceived(payload.payload);
+        }
+      }
     );
 
   activeChannel.subscribe((status, err) => {
@@ -113,5 +123,22 @@ export const unsubscribeFromRoom = () => {
       console.warn('[Realtime] Aviso ao desconectar canal:', err);
     }
     activeChannel = null;
+  }
+};
+
+/**
+ * Transmite uma provocação rápida / emote em tempo real
+ */
+export const broadcastEmote = async (roomId, playerId, nickname, emoteText) => {
+  if (activeChannel) {
+    try {
+      await activeChannel.send({
+        type: 'broadcast',
+        event: 'player_emote',
+        payload: { roomId, playerId, nickname, emoteText, timestamp: Date.now() },
+      });
+    } catch (err) {
+      console.warn('[Realtime] Erro ao transmitir emote:', err);
+    }
   }
 };

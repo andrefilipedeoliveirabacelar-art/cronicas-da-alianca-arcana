@@ -115,7 +115,14 @@ export const renderOpponentCardHTML = (hand) => {
 };
 
 // Renderiza a lista de oponentes no topo da mesa
-export const renderOpponentsHTML = (players, hands, currentTurnPlayerId, myPlayerId) => {
+export const renderOpponentsHTML = (
+  players,
+  hands,
+  currentTurnPlayerId,
+  myPlayerId,
+  isSelectingTarget = false,
+  selectingActionName = ''
+) => {
   const opponents = players.filter((p) => p.id !== myPlayerId);
 
   if (opponents.length === 0) {
@@ -131,19 +138,33 @@ export const renderOpponentsHTML = (players, hands, currentTurnPlayerId, myPlaye
       const oppHands = hands.filter((h) => h.player_id === opp.id);
       const isTurn = opp.id === currentTurnPlayerId;
       const isAlive = opp.is_alive;
+      const isTargetable = isSelectingTarget && isAlive;
 
       return `
-        <div class="relative flex flex-col items-center p-2.5 sm:p-3 rounded-2xl border ${
-          isTurn
-            ? 'border-amber-400 bg-amber-500/10 shadow-gold-glow animate-pulse-slow'
-            : isAlive
-            ? 'border-slate-800 bg-fantasy-surface/80'
-            : 'border-red-900/40 bg-black/60 opacity-50'
-        } transition-all">
+        <div 
+          data-target-player-id="${opp.id}"
+          class="opponent-slot relative flex flex-col items-center p-2.5 sm:p-3 rounded-2xl border transition-all ${
+            isTargetable
+              ? 'ring-4 ring-amber-400 border-amber-400 bg-amber-500/20 shadow-gold-glow animate-pulse cursor-pointer hover:scale-105'
+              : isTurn
+              ? 'border-amber-400 bg-amber-500/10 shadow-gold-glow animate-pulse-slow'
+              : isAlive
+              ? 'border-slate-800 bg-fantasy-surface/80'
+              : 'border-red-900/40 bg-black/60 opacity-50'
+          }"
+        >
+          <!-- Balão de Fala / Emote do Oponente -->
+          <div id="speech-bubble-${opp.id}" class="speech-bubble hidden absolute -top-9 left-1/2 -translate-x-1/2 z-30 text-[11px] whitespace-nowrap shadow-md"></div>
           
           ${isTurn ? `
             <div class="absolute -top-3 px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-title text-[10px] font-bold shadow tracking-wider uppercase">
               Vez Atual
+            </div>
+          ` : ''}
+
+          ${isTargetable ? `
+            <div class="absolute -top-3 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-title text-[10px] font-extrabold shadow-gold-glow tracking-wider uppercase animate-bounce">
+              🎯 Alvo
             </div>
           ` : ''}
 
@@ -169,7 +190,7 @@ export const renderOpponentsHTML = (players, hands, currentTurnPlayerId, myPlaye
 
           ${!isAlive ? `
             <div class="text-[10px] font-title font-bold text-red-500 mt-1 uppercase">
-              Eliminado
+              💀 Eliminado
             </div>
           ` : ''}
         </div>
@@ -356,8 +377,9 @@ export const renderActionBarHTML = (myPlayer, isMyTurn, turnPhase, pendingAction
 export const renderCenterAltarHTML = (room, myPlayerId, players) => {
   if (!room) return '';
 
-  const { turn_phase, pending_action, deck } = room;
+  const { turn_phase, pending_action, deck, current_turn_player_id } = room;
   const deckCount = Array.isArray(deck) ? deck.length : 0;
+  const isMyTurn = current_turn_player_id === myPlayerId;
 
   // Se estiver na Janela de Contestação ("MENTIRA!")
   if (turn_phase === 'challenge_window' && pending_action) {
@@ -377,9 +399,22 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
       : '';
 
     return `
-      <div class="w-full max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-purple-950/90 to-slate-950 border-2 border-purple-500/60 shadow-arcane-glow animate-pulse-slow text-center space-y-3">
-        <div class="inline-block px-3 py-1 rounded-full bg-purple-900/60 text-purple-300 border border-purple-500/40 text-xs font-title font-semibold uppercase tracking-widest">
-          ⚔️ Janela de Contestação Arcana
+      <div class="w-full max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-purple-950/90 to-slate-950 border-2 border-purple-500/60 shadow-arcane-glow text-center space-y-3">
+        
+        <!-- Header & Timer de Reação (10s) -->
+        <div class="flex items-center justify-between">
+          <div class="inline-block px-3 py-1 rounded-full bg-purple-900/60 text-purple-300 border border-purple-500/40 text-xs font-title font-semibold uppercase tracking-widest">
+            ⚔️ Janela de Contestação Arcana
+          </div>
+          <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
+            <span>⏱️</span>
+            <span id="reaction-timer-seconds">10s</span>
+          </div>
+        </div>
+
+        <!-- Barra de Progresso do Timer -->
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="reaction-timer-bar" class="bg-gradient-to-r from-amber-400 to-red-500 h-full transition-all duration-1000" style="width: 100%;"></div>
         </div>
 
         <div class="text-sm sm:text-base text-slate-200">
@@ -404,13 +439,13 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
               id="btn-call-bluff"
               class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-title text-xs sm:text-sm font-bold shadow-crimson-glow tracking-wider uppercase transition transform hover:scale-105 active:scale-95"
             >
-              ⚔️ GRITAR MENTIRA! (Contestar)
+              ⚡ Contestar (Mentira!)
             </button>
             <button
               id="btn-accept-action"
               class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-title text-xs sm:text-sm font-bold tracking-wider uppercase transition"
             >
-              🛡️ ${isBlockContest ? 'Aceitar Bloqueio' : 'Aceitar / Passar'}
+              ✓ Deixar Passar
             </button>
           </div>
         `}
@@ -446,8 +481,21 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
 
     return `
       <div class="w-full max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-cyan-950/90 to-slate-950 border-2 border-cyan-500/60 shadow-arcane-glow text-center space-y-3">
-        <div class="inline-block px-3 py-1 rounded-full bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-xs font-title font-semibold uppercase tracking-widest">
-          🛡️ Janela de Bloqueio Defensivo
+        
+        <!-- Header & Timer de Reação (10s) -->
+        <div class="flex items-center justify-between">
+          <div class="inline-block px-3 py-1 rounded-full bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-xs font-title font-semibold uppercase tracking-widest">
+            🛡️ Janela de Bloqueio Defensivo
+          </div>
+          <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold">
+            <span>⏱️</span>
+            <span id="reaction-timer-seconds">10s</span>
+          </div>
+        </div>
+
+        <!-- Barra de Progresso do Timer -->
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="reaction-timer-bar" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full transition-all duration-1000" style="width: 100%;"></div>
         </div>
 
         <div class="text-sm sm:text-base text-slate-200">
@@ -475,7 +523,7 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
                 id="btn-pass-block"
                 class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-title text-xs font-bold tracking-wider uppercase transition"
               >
-                Não Bloquear
+                ✓ Deixar Passar
               </button>
             </div>
           </div>
@@ -490,7 +538,20 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
 
   // Altar Padrão em repouso
   return `
-    <div class="flex items-center justify-center gap-4 sm:gap-6 py-2">
+    <div class="flex flex-col items-center justify-center gap-2 py-2">
+      <!-- Indicador de Turno com Timer de 25s (se for a vez) -->
+      ${turn_phase === 'action' ? `
+        <div class="w-full max-w-xs mx-auto space-y-1">
+          <div class="flex justify-between items-center text-[10px] text-slate-400">
+            <span class="font-medium text-slate-300">${isMyTurn ? '⚡ SEU TURNO DE AÇÃO' : 'Aguardando ação...'}</span>
+            <span id="action-timer-seconds" class="font-mono text-emerald-400 font-bold">25s</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div id="action-timer-bar" class="bg-gradient-to-r from-emerald-400 to-amber-400 h-full transition-all duration-1000" style="width: 100%;"></div>
+          </div>
+        </div>
+      ` : ''}
+
       <!-- Indicador do Baralho / Grimório -->
       <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-amber-500/30 text-amber-300 text-xs shadow-inner">
         <span class="text-lg">📜</span>
@@ -499,17 +560,31 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
           <div class="text-[9px] text-slate-400">no Grimório</div>
         </div>
       </div>
-
-      <!-- Tesouro Arcano de Runas -->
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-amber-500/30 text-amber-300 text-xs shadow-inner">
-        <span class="text-lg">💎</span>
-        <div>
-          <div class="font-title font-bold text-amber-300">Tesouro Arcano</div>
-          <div class="text-[9px] text-slate-400">Reserva Mágica</div>
-        </div>
-      </div>
     </div>
   `;
+};
+
+// Renderiza a gaveta retrátil "Cola Rápida"
+export const renderQuickCheatDrawerHTML = () => {
+  return CARD_CATALOG.map((card) => `
+    <div class="p-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 space-y-1.5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <span class="text-lg">${card.icon}</span>
+          <span class="font-title text-xs font-bold text-amber-300">${card.name}</span>
+        </div>
+        <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 uppercase">
+          ${card.universe_ref}
+        </span>
+      </div>
+      <div class="text-[11px] text-slate-300">
+        <span class="text-purple-400 font-semibold">⚡ Ação:</span> ${card.active_description}
+      </div>
+      <div class="text-[11px] text-slate-400 border-t border-slate-800 pt-1">
+        <span class="text-cyan-400 font-semibold">🛡️ Bloqueia:</span> ${card.block_description}
+      </div>
+    </div>
+  `).join('');
 };
 
 // Renderiza o Feed de Crônicas da Mesa (Game Logs)
