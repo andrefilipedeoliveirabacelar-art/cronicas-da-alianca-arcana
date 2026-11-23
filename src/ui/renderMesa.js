@@ -333,6 +333,19 @@ export const renderActionBarHTML = (myPlayer, isMyTurn, turnPhase, pendingAction
             </div>
             <span class="text-[9px] text-slate-400">Espia 1 carta do alvo e +1 Runa.</span>
           </button>
+
+          <!-- Drenagem Sombria (Lorde das Sombras) -->
+          <button
+            id="btn-act-darklord"
+            ${mustEpicStrike ? 'disabled' : ''}
+            class="p-2 rounded-lg border border-indigo-500/30 bg-indigo-950/30 hover:bg-indigo-900/40 hover:border-indigo-400 text-left transition col-span-2 sm:col-span-1 ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-title text-xs font-bold text-indigo-300">Drenagem Sombria</span>
+              <span class="text-xs">👁️</span>
+            </div>
+            <span class="text-[9px] text-slate-400">Extorque 1 Runa de cada adversário.</span>
+          </button>
         </div>
       </div>
     </div>
@@ -420,11 +433,13 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
     } else if (pending_action.action_code === 'STEAL' && isTarget) {
       blockOptions.push({ code: 'RINGBEARER', label: 'Bloquear com Portador do Anel' });
       blockOptions.push({ code: 'ARCHMAGE', label: 'Bloquear com Arquimago Supremo' });
+      blockOptions.push({ code: 'DARK_LORD', label: 'Bloquear com Lorde das Sombras' });
     } else if (pending_action.action_code === 'ASSASSINATE' && isTarget) {
       blockOptions.push({ code: 'RELIC_KEEPER', label: 'Bloquear com Guardião das Relíquias' });
     } else if (pending_action.action_code === 'DIVINATION' && isTarget) {
       blockOptions.push({ code: 'ORACLE', label: 'Bloquear com Oráculo de Delfos' });
       blockOptions.push({ code: 'ARCHMAGE', label: 'Bloquear com Arquimago Supremo' });
+      blockOptions.push({ code: 'DARK_LORD', label: 'Bloquear com Lorde das Sombras' });
     }
 
     const canIBlock = isGuildAid ? !isActor : isTarget;
@@ -559,7 +574,7 @@ export const renderRulesModalHTML = () => {
   return `
     <div class="space-y-4 text-xs sm:text-sm text-slate-300">
       <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
-        💡 <strong>Lei dos Nobres:</strong> Você pode declarar QUALQUER ação de personagem mesmo que NÃO tenha a carta correspondente na mão. Porém, se alguém gritar <em>"MENTIRA!"</em> e você for pego blefando, perderá uma de suas identidades arcanas!
+        💡 <strong>Lei dos Nobres:</strong> Você pode declarar QUALQUER ação de personagem mesmo que NÃO tenha a carta correspondente na mão. Porém, se alguém gritar <em>"MENTIRA!"</em> e você for pego blefando, perderá uma de suas identidades arcanas! O baralho possui <strong>35 cartas</strong> (7 arquétipos x 5 cópias cada) para 2 a 5 guerreiros.
       </div>
 
       <div class="overflow-x-auto">
@@ -579,7 +594,7 @@ export const renderRulesModalHTML = () => {
                     <span class="text-lg">${card.icon}</span>
                     <div>
                       <div class="font-title text-xs font-bold" style="color: ${card.faction_color}">${card.name}</div>
-                      <div class="text-[10px] text-slate-400">${card.universe_ref}</div>
+                      <div class="text-[10px] text-slate-400">${card.universe_ref} (5 cópias)</div>
                     </div>
                   </div>
                 </td>
@@ -602,6 +617,226 @@ export const renderRulesModalHTML = () => {
         <div>• <strong>Coletar 1 Runa:</strong> Ganha +1 Runa sem risco de contestação ou bloqueio.</div>
         <div>• <strong>Ajuda da Guilda:</strong> Ganha +2 Runas. Não é blefe, mas o Semideus pode tentar bloquear.</div>
         <div>• <strong>Golpe Épico (-7 Runas):</strong> Custa 7 Runas. Elimina imediatamente 1 carta de um adversário sem chance de blefe ou bloqueio. (Obrigatório se tiver 10+ Runas).</div>
+      </div>
+    </div>
+  `;
+};
+
+// Renderiza o Modal Completo do Ranking & Estatísticas
+export const renderRankingModalHTML = (leaderboard = [], myStats = null, activeTab = 'leaderboard') => {
+  const isLeaderboard = activeTab === 'leaderboard';
+
+  return `
+    <div class="space-y-4">
+      <!-- Navegação das Abas -->
+      <div class="flex items-center justify-center gap-2 border-b border-slate-800 pb-3">
+        <button
+          id="tab-btn-leaderboard"
+          class="px-4 py-2 rounded-xl font-title text-xs font-bold uppercase tracking-wider transition ${
+            isLeaderboard
+              ? 'bg-amber-500 text-slate-950 shadow-gold-glow'
+              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }"
+        >
+          🏆 Classificação Geral
+        </button>
+        <button
+          id="tab-btn-profile"
+          class="px-4 py-2 rounded-xl font-title text-xs font-bold uppercase tracking-wider transition ${
+            !isLeaderboard
+              ? 'bg-purple-600 text-white shadow-arcane-glow'
+              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }"
+        >
+          📜 Meu Perfil Arcano
+        </button>
+      </div>
+
+      <!-- CONTEÚDO: ABA 1 - CLASSIFICAÇÃO GERAL -->
+      ${isLeaderboard ? `
+        <div class="space-y-3">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 px-1">
+            <span>Ordem dos Guerreiros mais Gloriosos da Aliança</span>
+            <span>Total: ${leaderboard.length} Heróis</span>
+          </div>
+
+          ${leaderboard.length === 0 ? `
+            <div class="text-center py-8 text-slate-500 text-xs italic">
+              Nenhum duelo foi registrado ainda neste santuário. Seja o primeiro a forjar sua lenda!
+            </div>
+          ` : `
+            <div class="overflow-x-auto max-h-[50vh] overflow-y-auto pr-1">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-amber-500/30 font-title text-amber-400 text-[11px]">
+                    <th class="py-2 px-2 text-center">Rank</th>
+                    <th class="py-2 px-2">Guerreiro</th>
+                    <th class="py-2 px-2 text-center">Pontos</th>
+                    <th class="py-2 px-2 text-center">Vitórias</th>
+                    <th class="py-2 px-2 text-center">Derrotas</th>
+                    <th class="py-2 px-2 text-center">Win Rate</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                  ${leaderboard.map((item, idx) => {
+                    let medal = `#${idx + 1}`;
+                    if (idx === 0) medal = '🥇 1º';
+                    else if (idx === 1) medal = '🥈 2º';
+                    else if (idx === 2) medal = '🥉 3º';
+
+                    const total = (item.wins || 0) + (item.losses || 0);
+                    const winrate = total > 0 ? ((item.wins / total) * 100).toFixed(0) + '%' : '0%';
+
+                    return `
+                      <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-2 px-2 text-center font-title font-bold text-amber-300">
+                          ${medal}
+                        </td>
+                        <td class="py-2 px-2 font-bold text-slate-200">
+                          ${item.nickname}
+                        </td>
+                        <td class="py-2 px-2 text-center font-mono font-bold text-purple-300">
+                          ${item.score || 0}
+                        </td>
+                        <td class="py-2 px-2 text-center text-emerald-400 font-semibold">
+                          ${item.wins || 0}
+                        </td>
+                        <td class="py-2 px-2 text-center text-red-400 font-semibold">
+                          ${item.losses || 0}
+                        </td>
+                        <td class="py-2 px-2 text-center text-amber-300 font-mono">
+                          ${winrate}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      ` : `
+        <!-- CONTEÚDO: ABA 2 - MEU PERFIL ARCANO DETALHADO -->
+        <div class="space-y-4">
+          ${!myStats ? `
+            <div class="text-center py-8 text-slate-500 text-xs italic">
+              Selecione seu nome de guerreiro para carregar seu registro histórico.
+            </div>
+          ` : `
+            <!-- Resumo Superior -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center">
+                <span class="text-[10px] text-slate-400 uppercase font-semibold">Duelos</span>
+                <div class="font-title text-lg font-bold text-slate-200 mt-0.5">${myStats.games_played || 0}</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center">
+                <span class="text-[10px] text-emerald-400 uppercase font-semibold">Vitórias</span>
+                <div class="font-title text-lg font-bold text-emerald-300 mt-0.5">${myStats.wins || 0}</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-center">
+                <span class="text-[10px] text-red-400 uppercase font-semibold">Derrotas</span>
+                <div class="font-title text-lg font-bold text-red-300 mt-0.5">${myStats.losses || 0}</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-center">
+                <span class="text-[10px] text-amber-400 uppercase font-semibold">Win Rate</span>
+                <div class="font-title text-lg font-bold text-amber-300 mt-0.5">
+                  ${(myStats.games_played || 0) > 0 ? (((myStats.wins || 0) / myStats.games_played) * 100).toFixed(1) + '%' : '0%'}
+                </div>
+              </div>
+            </div>
+
+            <!-- Golpes Aplicados vs Sofridos -->
+            <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+              <div class="font-title text-xs font-bold text-amber-300 uppercase tracking-wider">
+                ⚔️ Registro de Golpes e Conflitos
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
+                  <span>⚡ Golpe Épico:</span>
+                  <div class="font-mono text-right">
+                    <span class="text-emerald-400 font-bold">${myStats.epic_strikes_dealt || 0} feitos</span> / 
+                    <span class="text-red-400 font-bold">${myStats.epic_strikes_received || 0} sofridos</span>
+                  </div>
+                </div>
+
+                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
+                  <span>🗡️ Fúria Olímpica:</span>
+                  <div class="font-mono text-right">
+                    <span class="text-emerald-400 font-bold">${myStats.assassinations_dealt || 0} feitos</span> / 
+                    <span class="text-red-400 font-bold">${myStats.assassinations_received || 0} sofridos</span>
+                  </div>
+                </div>
+
+                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
+                  <span>💍 Manto Élfico:</span>
+                  <div class="font-mono text-right">
+                    <span class="text-emerald-400 font-bold">${myStats.steals_dealt || 0} roubos</span> / 
+                    <span class="text-red-400 font-bold">${myStats.steals_received || 0} sofridos</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Blefes e Bloqueios -->
+            <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+              <div class="font-title text-xs font-bold text-purple-300 uppercase tracking-wider">
+                🎭 Arte do Blefe e Proteção
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
+                  <span>⚔️ Blefes Desmascarados:</span>
+                  <span class="font-mono font-bold text-emerald-400">${myStats.bluffs_exposed || 0} vezes</span>
+                </div>
+                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
+                  <span>❌ Pego Mentindo:</span>
+                  <span class="font-mono font-bold text-red-400">${myStats.bluffs_caught || 0} vezes</span>
+                </div>
+                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
+                  <span>🛡️ Bloqueios Bem-Sucedidos:</span>
+                  <span class="font-mono font-bold text-cyan-300">${myStats.blocks_performed || 0} vezes</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cartas Mais Invocadas -->
+            <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+              <div class="font-title text-xs font-bold text-amber-300 uppercase tracking-wider">
+                🃏 Cartas Mais Invocadas nas Partidas
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                ${CARD_CATALOG.map((card) => {
+                  const usedCount = (myStats.cards_used && myStats.cards_used[card.code]) || 0;
+                  return `
+                    <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between text-xs">
+                      <div class="flex items-center gap-1.5 truncate">
+                        <span>${card.icon}</span>
+                        <span class="truncate text-[11px] text-slate-300">${card.name}</span>
+                      </div>
+                      <span class="font-mono font-bold text-amber-400 shrink-0 ml-1">${usedCount}x</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `}
+        </div>
+      `}
+
+      <!-- AÇÃO ADMINISTRATIVA: ZERAR RANKING -->
+      <div class="border-t border-slate-800 pt-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <span class="text-[10px] text-slate-500 italic">
+          Os registros de glória são atualizados automaticamente ao fim de cada contenda.
+        </span>
+        <button
+          id="btn-reset-ranking"
+          class="px-3 py-1.5 rounded-xl border border-red-500/40 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-title text-[10px] font-bold tracking-wider uppercase transition shadow-sm"
+          title="Zerar todos os registros do Santuário"
+        >
+          ⚠️ Zerar Ranking do Santuário
+        </button>
       </div>
     </div>
   `;

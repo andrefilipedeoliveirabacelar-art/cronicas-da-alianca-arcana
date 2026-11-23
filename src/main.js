@@ -24,8 +24,14 @@ import {
   renderCenterAltarHTML,
   renderLogsHTML,
   renderRulesModalHTML,
+  renderRankingModalHTML,
   getAvatarIcon,
 } from './ui/renderMesa.js';
+import {
+  fetchLeaderboard,
+  getOrCreatePlayerStats,
+  resetAllRankings,
+} from './engine/statsService.js';
 
 // ESTADO GLOBAL DA APLICAÇÃO
 const state = {
@@ -37,6 +43,7 @@ const state = {
   selectedAvatar: 'mago',
   pendingTargetAction: null, // Guarda a ação aguardando escolha de alvo
   exchangeSelectedCards: [],
+  rankingActiveTab: 'leaderboard',
 };
 
 // ELEMENTOS DOM
@@ -85,6 +92,12 @@ const DOM = {
   btnOpenRules: document.getElementById('btn-open-rules'),
   btnCloseRules: document.getElementById('btn-close-rules'),
   btnCloseRulesBottom: document.getElementById('btn-close-rules-bottom'),
+
+  modalRanking: document.getElementById('modal-ranking'),
+  rankingContent: document.getElementById('ranking-content'),
+  btnOpenRanking: document.getElementById('btn-open-ranking'),
+  btnCloseRanking: document.getElementById('btn-close-ranking'),
+  btnCloseRankingBottom: document.getElementById('btn-close-ranking-bottom'),
 
   modalTarget: document.getElementById('modal-target-selector'),
   targetModalIcon: document.getElementById('target-modal-icon'),
@@ -294,7 +307,7 @@ const updateLobbyUI = () => {
   if (!state.currentRoom) return;
 
   DOM.displayRoomCode.textContent = state.currentRoom.code;
-  DOM.playerCountBadge.textContent = `${state.currentPlayers.length} / 6 Guerreiros`;
+  DOM.playerCountBadge.textContent = `${state.currentPlayers.length} / 5 Guerreiros (2 a 5 Heróis)`;
 
   // Lista de jogadores no Lobby
   DOM.lobbyPlayersList.innerHTML = state.currentPlayers
@@ -591,6 +604,18 @@ const attachActionBarEventListeners = () => {
           await declareAction(roomId, player, 'DIVINATION', target);
         },
       });
+    };
+  }
+
+  // 10. Drenagem Sombria (Lorde das Sombras)
+  const btnDarkLord = document.getElementById('btn-act-darklord');
+  if (btnDarkLord) {
+    btnDarkLord.onclick = async () => {
+      try {
+        await declareAction(roomId, player, 'DARK_DRAIN');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
     };
   }
 };
@@ -983,6 +1008,60 @@ const closeRules = () => {
 };
 DOM.btnCloseRules.onclick = closeRules;
 DOM.btnCloseRulesBottom.onclick = closeRules;
+
+// ==========================================
+// MODAL DE SALÃO DA GLÓRIA & RANKING
+// ==========================================
+const openRankingModal = async () => {
+  const currentNick = state.currentPlayer?.nickname || DOM.inputNickname?.value.trim() || null;
+  const [leaderboard, myStats] = await Promise.all([
+    fetchLeaderboard(),
+    currentNick ? getOrCreatePlayerStats(currentNick) : null,
+  ]);
+
+  DOM.rankingContent.innerHTML = renderRankingModalHTML(leaderboard, myStats, state.rankingActiveTab);
+  attachRankingModalEvents(leaderboard, myStats);
+  DOM.modalRanking.classList.remove('hidden');
+};
+
+const attachRankingModalEvents = (leaderboard, myStats) => {
+  const tabBtnLeaderboard = document.getElementById('tab-btn-leaderboard');
+  const tabBtnProfile = document.getElementById('tab-btn-profile');
+  const btnResetRanking = document.getElementById('btn-reset-ranking');
+
+  if (tabBtnLeaderboard) {
+    tabBtnLeaderboard.onclick = () => {
+      state.rankingActiveTab = 'leaderboard';
+      DOM.rankingContent.innerHTML = renderRankingModalHTML(leaderboard, myStats, 'leaderboard');
+      attachRankingModalEvents(leaderboard, myStats);
+    };
+  }
+
+  if (tabBtnProfile) {
+    tabBtnProfile.onclick = () => {
+      state.rankingActiveTab = 'profile';
+      DOM.rankingContent.innerHTML = renderRankingModalHTML(leaderboard, myStats, 'profile');
+      attachRankingModalEvents(leaderboard, myStats);
+    };
+  }
+
+  if (btnResetRanking) {
+    btnResetRanking.onclick = async () => {
+      const confirmReset = window.confirm(
+        '⚠️ ATENÇÃO: Deseja realmente zerar todos os rankings, vitórias, derrotas e histórico de combate do Santuário? Esta ação é irreversível.'
+      );
+      if (confirmReset) {
+        await resetAllRankings();
+        showToast('Ranking do santuário foi zerado com sucesso!', 'success');
+        openRankingModal();
+      }
+    };
+  }
+};
+
+DOM.btnOpenRanking.onclick = openRankingModal;
+DOM.btnCloseRanking.onclick = () => DOM.modalRanking.classList.add('hidden');
+DOM.btnCloseRankingBottom.onclick = () => DOM.modalRanking.classList.add('hidden');
 
 // ==========================================
 // CONFIGURAÇÃO SUPABASE RUNTIME

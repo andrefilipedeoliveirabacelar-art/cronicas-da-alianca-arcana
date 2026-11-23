@@ -30,6 +30,16 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <!-- Botão Salão da Glória & Ranking -->
+        <button
+          id="btn-open-ranking"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-title text-xs font-semibold shadow-sm transition transform active:scale-95"
+          title="Ver Classificação Geral e Estatísticas"
+        >
+          <span>🏆</span>
+          <span class="hidden sm:inline">Ranking</span>
+        </button>
+
         <!-- Botão Grimório de Regras -->
         <button
           id="btn-open-rules"
@@ -497,7 +507,36 @@
     </div>
 
     <!-- ============================================== -->
-    <!-- MODAL 7: CONFIGURAÇÃO DE CREDENCIAIS SUPABASE  -->
+    <!-- MODAL 7: SALÃO DA GLÓRIA & RANKING             -->
+    <!-- ============================================== -->
+    <div id="modal-ranking" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div class="w-full max-w-2xl bg-fantasy-surface border-2 border-amber-500/50 rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[92vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-amber-500/30 pb-3 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🏆</span>
+            <h3 class="font-title text-base sm:text-xl font-bold text-amber-300">
+              Salão da Glória & Registros Arcanos
+            </h3>
+          </div>
+          <button id="btn-close-ranking" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm">
+            ✕
+          </button>
+        </div>
+
+        <div id="ranking-content" class="flex-1 overflow-y-auto pr-1">
+          <!-- Renderizado via renderMesa.js -->
+        </div>
+
+        <div class="border-t border-slate-800 pt-3 text-right">
+          <button id="btn-close-ranking-bottom" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold uppercase tracking-wider">
+            Fechar Salão
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 8: CONFIGURAÇÃO DE CREDENCIAIS SUPABASE  -->
     <!-- ============================================== -->
     <div id="modal-supabase-config" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
       <div class="w-full max-w-md bg-fantasy-surface border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 space-y-4">

@@ -1,6 +1,13 @@
 import { supabase } from '../lib/supabase.js';
+import {
+  trackCardUsage,
+  trackCombatStrike,
+  trackBluffCall,
+  trackBlock,
+  trackMatchOutcome,
+} from './statsService.js';
 
-// Catálogo Mestre das 6 Cartas de Alta Fantasia
+// Catálogo Mestre de 35 Cartas (7 Arquétipos x 5 Cópias Cada)
 export const CARD_CATALOG = [
   {
     code: 'ARCHMAGE',
@@ -11,7 +18,7 @@ export const CARD_CATALOG = [
     active_description: 'Compra 2 cartas do grimório, escolhe quais manter e devolve 2 ao fundo do baralho.',
     block_ability_name: 'Contrafeitiço',
     block_description: 'Bloqueia o Manto Élfico (Portador do Anel) e a Profecia Arcana (Oráculo).',
-    copies_in_deck: 3,
+    copies_in_deck: 5,
     icon: '🧙‍♂️',
   },
   {
@@ -23,7 +30,7 @@ export const CARD_CATALOG = [
     active_description: 'Rouba até 2 Runas de um adversário à sua escolha.',
     block_ability_name: 'Invisibilidade',
     block_description: 'Bloqueia tentativas de roubo de outro Portador do Anel.',
-    copies_in_deck: 3,
+    copies_in_deck: 5,
     icon: '💍',
   },
   {
@@ -35,7 +42,7 @@ export const CARD_CATALOG = [
     active_description: 'Paga 3 Runas e desfere um ataque letal: o alvo perde 1 identidade arcana.',
     block_ability_name: 'Barreira Celeste',
     block_description: 'Bloqueia a Ajuda da Guilda coletada por qualquer jogador.',
-    copies_in_deck: 3,
+    copies_in_deck: 5,
     icon: '⚡',
   },
   {
@@ -47,7 +54,7 @@ export const CARD_CATALOG = [
     active_description: 'Saqueia o tesouro ancestral de Erebor, recebendo imediatamente +3 Runas.',
     block_ability_name: 'Resistência Dracônica',
     block_description: 'Aura inabalável imune a tributos forçados.',
-    copies_in_deck: 3,
+    copies_in_deck: 5,
     icon: '🐉',
   },
   {
@@ -59,7 +66,7 @@ export const CARD_CATALOG = [
     active_description: 'Recebe +2 Runas puras do santuário arcano (ação sagrada não bloqueável).',
     block_ability_name: 'Escudo das Relíquias',
     block_description: 'Bloqueia o golpe mortal da Fúria Olímpica (Semideus).',
-    copies_in_deck: 3,
+    copies_in_deck: 5,
     icon: '🛡️',
   },
   {
@@ -71,8 +78,20 @@ export const CARD_CATALOG = [
     active_description: 'Espia secretamente 1 carta oculta de um adversário e ganha +1 Runa de oferenda.',
     block_ability_name: 'Névoa Mística',
     block_description: 'Bloqueia tentativas de espionagem do Oráculo adversário.',
-    copies_in_deck: 3,
+    copies_in_deck: 5,
     icon: '🔮',
+  },
+  {
+    code: 'DARK_LORD',
+    name: 'Lorde das Sombras',
+    universe_ref: 'Senhor dos Anéis & Harry Potter',
+    faction_color: '#6366F1',
+    active_ability_name: 'Drenagem Sombria',
+    active_description: 'Extorque 1 Runa de cada adversário vivo na mesa para o seu poder.',
+    block_ability_name: 'Manto das Trevas',
+    block_description: 'Bloqueia o roubo do Portador do Anel e a espionagem do Oráculo.',
+    copies_in_deck: 5,
+    icon: '👁️',
   },
 ];
 
@@ -200,8 +219,8 @@ export const joinRoom = async (roomCode, nickname, avatarTheme = 'guerreiro') =>
 
   if (countError) throw new Error('Falha ao verificar jogadores da sala.');
 
-  if (currentPlayers.length >= 6) {
-    throw new Error('A sala atingiu o limite máximo de 6 nobres arcanos.');
+  if (currentPlayers.length >= 5) {
+    throw new Error('A sala atingiu o limite máximo de 5 nobres arcanos (2 a 5 jogadores).');
   }
 
   const nextSeat = currentPlayers.length + 1;
@@ -377,6 +396,20 @@ export const checkVictoryCondition = async (roomId) => {
 
   if (alivePlayers && alivePlayers.length === 1) {
     const winner = alivePlayers[0];
+    
+    // Registra vitória e derrotas no ranking
+    try {
+      const { data: allRoomPlayers } = await supabase
+        .from('players')
+        .select('nickname')
+        .eq('room_id', roomId);
+
+      const allNicks = allRoomPlayers ? allRoomPlayers.map((p) => p.nickname) : [];
+      await trackMatchOutcome(winner.nickname, allNicks);
+    } catch (err) {
+      console.warn('Erro ao atualizar ranking de fim de partida:', err);
+    }
+
     await supabase
       .from('rooms')
       .update({
@@ -416,6 +449,9 @@ export const actEpicStrike = async (roomId, actor, target) => {
     .from('players')
     .update({ runes: actor.runes - 7 })
     .eq('id', actor.id);
+
+  // Registra combate no ranking
+  trackCombatStrike(actor.nickname, target.nickname, 'EPIC_STRIKE');
 
   await addGameLog(roomId, actor.nickname, 'ACTION', `⚡ ${actor.nickname} conjurou um GOLPE ÉPICO contra ${target.nickname}!`);
 
@@ -482,8 +518,18 @@ export const declareAction = async (roomId, actor, actionCode, target = null) =>
       claimedCard = 'ORACLE';
       break;
 
+    case 'DARK_DRAIN':
+      actionLabel = 'Drenagem Sombria (Extorquir 1 Runa de cada adversário)';
+      claimedCard = 'DARK_LORD';
+      break;
+
     default:
       throw new Error(`Ação desconhecida: ${actionCode}`);
+  }
+
+  // Rastreia carta declarada no perfil
+  if (claimedCard) {
+    trackCardUsage(actor.nickname, claimedCard);
   }
 
   const pendingAction = {
@@ -548,6 +594,8 @@ export const callBluff = async (roomId, challenger) => {
 
   if (!hasCard) {
     // ERA BLEFE! O acusado mentiu!
+    trackBluffCall(targetName, challenger.nickname, true);
+
     await addGameLog(
       roomId,
       targetName,
@@ -567,6 +615,8 @@ export const callBluff = async (roomId, challenger) => {
     }
   } else {
     // ERA VERDADE! O acusado falava a verdade!
+    trackBluffCall(targetName, challenger.nickname, false);
+
     await addGameLog(
       roomId,
       targetName,
@@ -668,6 +718,10 @@ export const declareBlock = async (roomId, blocker, blockCard) => {
   const { data: room } = await supabase.from('rooms').select('*').eq('id', roomId).single();
   if (!room || !room.pending_action) return;
 
+  // Rastreia bloqueio e uso da carta no perfil
+  trackBlock(blocker.nickname);
+  trackCardUsage(blocker.nickname, blockCard);
+
   const updatedAction = {
     ...room.pending_action,
     blocked_by_id: blocker.id,
@@ -743,6 +797,7 @@ export const resolveAction = async (roomId) => {
     case 'RINGBEARER':
     case 'STEAL': {
       if (target) {
+        trackCombatStrike(actor_name, target_name, 'STEAL');
         const stolenAmount = Math.min(2, Math.max(0, target.runes));
         await supabase
           .from('players')
@@ -766,6 +821,7 @@ export const resolveAction = async (roomId) => {
     case 'DEMIGOD':
     case 'ASSASSINATE': {
       if (target) {
+        trackCombatStrike(actor_name, target_name, 'ASSASSINATE');
         await addGameLog(
           roomId,
           actor_name,
@@ -774,6 +830,44 @@ export const resolveAction = async (roomId) => {
         );
         await forcePlayerLoseCard(roomId, target.id);
       }
+      await advanceTurn(roomId);
+      break;
+    }
+
+    case 'DARK_LORD':
+    case 'DARK_DRAIN': {
+      // Drenagem Sombria: drena 1 runa de cada outro jogador vivo na mesa
+      const { data: otherPlayers } = await supabase
+        .from('players')
+        .select('*')
+        .eq('room_id', roomId)
+        .eq('is_alive', true)
+        .neq('id', actor.id);
+
+      let totalDrained = 0;
+      if (otherPlayers && otherPlayers.length > 0) {
+        for (const op of otherPlayers) {
+          if (op.runes > 0) {
+            await supabase
+              .from('players')
+              .update({ runes: op.runes - 1 })
+              .eq('id', op.id);
+            totalDrained += 1;
+          }
+        }
+      }
+
+      await supabase
+        .from('players')
+        .update({ runes: actor.runes + totalDrained })
+        .eq('id', actor.id);
+
+      await addGameLog(
+        roomId,
+        actor_name,
+        'ACTION',
+        `👁️ ${actor_name} conjurou a Drenagem Sombria e extorquiu ${totalDrained} Runas dos outros jogadores!`
+      );
       await advanceTurn(roomId);
       break;
     }
