@@ -622,6 +622,19 @@ export const acceptAction = async (roomId, player) => {
 
   if (allAccepted) {
     if (room.turn_phase === 'challenge_window') {
+      const isBlockContest = Boolean(room.pending_action.blocked_by_id);
+      if (isBlockContest) {
+        // Bloqueio aceito por todos! Ação original cancelada com sucesso.
+        await addGameLog(
+          roomId,
+          room.pending_action.blocked_by_name,
+          'BLOCK',
+          `🛡️ O bloqueio de ${room.pending_action.blocked_by_name} foi aceito por todos. A ação foi frustrada.`
+        );
+        await advanceTurn(roomId);
+        return;
+      }
+
       // Ação não foi contestada. Se puder ser bloqueada, vai para block_window; senão resolve
       const blockableActions = ['GUILD_AID', 'STEAL', 'ASSASSINATE', 'DIVINATION'];
       if (blockableActions.includes(room.pending_action.action_code)) {

@@ -348,9 +348,13 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
 
   // Se estiver na Janela de Contestação ("MENTIRA!")
   if (turn_phase === 'challenge_window' && pending_action) {
-    const isActor = pending_action.actor_id === myPlayerId;
-    const isBlocker = pending_action.blocked_by_id === myPlayerId;
-    const isTarget = pending_action.target_id === myPlayerId;
+    const isBlockContest = Boolean(pending_action.blocked_by_id);
+    
+    // Quem fez a afirmação a ser contestada:
+    // Se for bloqueio, quem declarou foi o bloqueador (blocked_by_id)
+    // Se for ação, quem declarou foi o autor da ação (actor_id)
+    const claimantId = isBlockContest ? pending_action.blocked_by_id : pending_action.actor_id;
+    const isClaimant = claimantId === myPlayerId;
 
     const subjectName = pending_action.blocked_by_name || pending_action.actor_name;
     const claimedCardName = pending_action.block_card
@@ -358,8 +362,6 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
       : pending_action.claimed_card
       ? getCardByCode(pending_action.claimed_card).name
       : '';
-
-    const isBlockContest = Boolean(pending_action.blocked_by_id);
 
     return `
       <div class="w-full max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-purple-950/90 to-slate-950 border-2 border-purple-500/60 shadow-arcane-glow animate-pulse-slow text-center space-y-3">
@@ -379,7 +381,7 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
           ` : ''}
         </div>
 
-        ${isActor || isBlocker ? `
+        ${isClaimant ? `
           <div class="text-xs text-amber-400/80 italic py-2">
             Aguardando a reação dos outros nobres arcanos à sua declaração...
           </div>
@@ -395,7 +397,7 @@ export const renderCenterAltarHTML = (room, myPlayerId, players) => {
               id="btn-accept-action"
               class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-title text-xs sm:text-sm font-bold tracking-wider uppercase transition"
             >
-              🛡️ Aceitar / Passar
+              🛡️ ${isBlockContest ? 'Aceitar Bloqueio' : 'Aceitar / Passar'}
             </button>
           </div>
         `}
