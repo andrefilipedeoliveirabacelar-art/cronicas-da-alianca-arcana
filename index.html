@@ -19,17 +19,30 @@
 
     <!-- CABEÇALHO GLOBAL COMPACTO -->
     <header class="w-full flex-shrink-0 border-b border-tavern-woodBorder bg-tavern-wood/95 backdrop-blur-md px-3 py-2 flex items-center justify-between z-40 shadow-md">
-      <div class="flex items-center gap-2">
-        <span class="text-xl filter drop-shadow">🎭</span>
+      <div class="flex items-center gap-2 cursor-pointer" id="btn-header-home" title="Ir para o Clube Arcana Table">
+        <span class="text-xl sm:text-2xl filter drop-shadow">🎲</span>
         <div>
-          <h1 class="font-title text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-pink-400 tracking-wider">
-            CRÔNICAS DA ALIANÇA ARCANA
+          <h1 class="font-title text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-300 tracking-wider">
+            ARCANA TABLE
           </h1>
-          <p class="text-[9px] text-slate-400 font-medium">Blefe, Heróis & Caça a Monstros</p>
+          <p class="text-[9px] text-slate-400 font-medium">Clube de Jogos & Estratégia</p>
         </div>
       </div>
 
       <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Player Profile & Level Pill -->
+        <button
+          id="btn-player-pill"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/60 to-purple-950/60 hover:from-amber-900/60 hover:to-purple-900/60 shadow-sm transition transform active:scale-95"
+          title="Ver Meu Perfil, XP e Níveis"
+        >
+          <span id="header-avatar" class="text-sm">🧙‍♂️</span>
+          <div class="text-left flex flex-col">
+            <span id="header-nickname" class="text-[11px] font-bold text-slate-200 block leading-tight max-w-[80px] truncate">Jogador</span>
+            <span id="header-level-badge" class="text-[8px] font-black text-amber-400 leading-none">Nv. 1</span>
+          </div>
+        </button>
+
         <!-- Som / Efeitos Sonoros -->
         <button
           id="btn-toggle-sound"
@@ -81,12 +94,78 @@
     </header>
 
     <!-- CONTAINER PRINCIPAL DINÂMICO -->
-    <main class="flex-1 w-full max-w-5xl mx-auto flex flex-col relative">
+    <main class="flex-1 w-full max-w-5xl mx-auto flex flex-col relative pb-16 sm:pb-4">
+
+      <!-- ============================================== -->
+      <!-- TELA 0: HUB DO CLUBE ARCANA TABLE (CATÁLOGO)  -->
+      <!-- ============================================== -->
+      <section id="screen-hub" class="flex-1 w-full p-3 sm:p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar">
+        <!-- Hero Banner do Clube -->
+        <div class="relative overflow-hidden rounded-3xl p-4 sm:p-6 bg-gradient-to-r from-purple-950/80 via-slate-900/90 to-amber-950/80 border-2 border-amber-500/40 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="text-center sm:text-left space-y-1.5 z-10">
+            <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider">
+              ✨ Clube de Jogos de Tabuleiro
+            </span>
+            <h2 class="font-title text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-300">
+              Arcana Table
+            </h2>
+            <p class="text-xs text-slate-300 max-w-md leading-relaxed">
+              Descubra 9 experiências completas de estratégia, blefe e diversão com amigos ou contra Bots inteligentes.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2 z-10 w-full sm:w-auto">
+            <button id="btn-hub-quick-play" class="flex-1 sm:flex-none min-h-[44px] px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-title text-xs font-black shadow-lg shadow-amber-500/20 uppercase tracking-wider transition transform active:scale-95 flex items-center justify-center gap-1.5">
+              <span>⚡</span>
+              <span>Jogo Rápido</span>
+            </button>
+            <button id="btn-hub-profile" class="min-h-[44px] px-3.5 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 font-title text-xs font-bold transition flex items-center justify-center gap-1.5">
+              <span>👤</span>
+              <span class="hidden sm:inline">Perfil</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filtros de Categorias e Barra de Pesquisa -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          <div class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar" id="hub-category-tabs">
+            <button data-cat="all" class="btn-hub-cat px-3 py-1.5 rounded-xl text-xs font-bold font-title border bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm transition whitespace-nowrap">
+              ✨ Todos os Jogos
+            </button>
+            <button data-cat="bluff" class="btn-hub-cat px-3 py-1.5 rounded-xl text-xs font-bold font-title border bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+              🎭 Blefe & Estratégia
+            </button>
+            <button data-cat="words" class="btn-hub-cat px-3 py-1.5 rounded-xl text-xs font-bold font-title border bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+              🎨 Palavras & Criatividade
+            </button>
+            <button data-cat="music" class="btn-hub-cat px-3 py-1.5 rounded-xl text-xs font-bold font-title border bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+              🎵 Música & Quiz
+            </button>
+          </div>
+
+          <div class="relative min-w-[200px]">
+            <input id="input-hub-search" type="text" placeholder="Buscar jogo..." class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-amber-400 text-xs text-slate-200 placeholder-slate-500 focus:outline-none" />
+            <span class="absolute left-2.5 top-2 text-xs text-slate-500">🔍</span>
+          </div>
+        </div>
+
+        <!-- Grade dos 9 Jogos -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pb-6" id="hub-games-grid">
+          <!-- Renderizado via JS -->
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TELA MODULAR: SUBJOGOS (CORTE, ONÍRICO, ETC.)   -->
+      <!-- ============================================== -->
+      <section id="screen-game-container" class="hidden flex-1 w-full flex flex-col relative">
+        <!-- Montado dinamicamente pela classe do jogo -->
+      </section>
 
       <!-- ============================================== -->
       <!-- TELA 1: ENTRADA NA TAVERNA (SOLO / LOBBY)     -->
       <!-- ============================================== -->
-      <section id="screen-lobby" class="flex-1 w-full max-w-lg mx-auto p-3 sm:p-4 flex flex-col justify-between overflow-y-auto no-scrollbar">
+      <section id="screen-lobby" class="hidden flex-1 w-full max-w-lg mx-auto p-3 sm:p-4 flex flex-col justify-between overflow-y-auto no-scrollbar">
         
         <div class="space-y-4 my-auto">
           <!-- Banner Heroico -->
@@ -619,6 +698,156 @@
         </div>
       </div>
     </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 10: PERFIL DO JOGADOR, XP E NÍVEIS        -->
+    <!-- ============================================== -->
+    <div id="modal-player-profile" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div class="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col tavern-panel border-2 border-amber-500/70 rounded-3xl overflow-hidden shadow-2xl bg-[#140F1D]">
+        <!-- Topo -->
+        <div class="flex-shrink-0 px-4 py-3 bg-slate-950/90 border-b border-amber-500/30 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">👤</span>
+            <div>
+              <h3 class="font-title text-sm font-black text-amber-300">
+                Perfil do Jogador & Estatísticas
+              </h3>
+              <p class="text-[10px] text-slate-400">Progresso Geral e Níveis por Jogo</p>
+            </div>
+          </div>
+          <button id="btn-close-player-profile" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">✕</button>
+        </div>
+
+        <!-- Conteúdo Rolável -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs no-scrollbar">
+          <!-- Card de Identidade do Jogador -->
+          <div class="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 to-slate-900 border border-purple-500/30 flex flex-col sm:flex-row items-center gap-4">
+            <div id="profile-modal-avatar-display" class="w-16 h-16 rounded-2xl bg-amber-500/10 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-lg">
+              🧙‍♂️
+            </div>
+            <div class="flex-1 text-center sm:text-left space-y-1">
+              <div class="flex items-center justify-center sm:justify-start gap-2">
+                <span id="profile-modal-nickname" class="text-base font-black text-white">Viajante Arcano</span>
+                <span id="profile-modal-level-pill" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">Nv. 1</span>
+              </div>
+              <p id="profile-modal-title" class="text-xs text-purple-300 font-medium">Iniciado Arcano</p>
+              
+              <!-- Barra de XP Global -->
+              <div class="w-full space-y-1 pt-1">
+                <div class="flex justify-between text-[10px] text-slate-400">
+                  <span id="profile-modal-xp-text">50 / 160 XP</span>
+                  <span id="profile-modal-xp-percent">31%</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div id="profile-modal-xp-bar" class="h-full bg-gradient-to-r from-amber-500 to-purple-500" style="width: 31%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Editar Apelido e Avatar -->
+          <div class="p-3.5 rounded-2xl bg-black/40 border border-slate-800 space-y-3">
+            <h4 class="font-title text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+              Personalizar Identidade
+            </h4>
+
+            <div>
+              <label class="block text-[10px] text-slate-400 uppercase font-bold mb-1">Escolha seu Avatar:</label>
+              <div class="grid grid-cols-4 sm:grid-cols-8 gap-1.5" id="profile-avatars-grid">
+                <!-- Inserido via JS -->
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <input id="profile-input-nickname" type="text" maxlength="20" placeholder="Novo Apelido..." class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none" />
+              <button id="btn-profile-save-name" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-title text-xs font-bold transition">
+                Salvar
+              </button>
+            </div>
+          </div>
+
+          <!-- Estatísticas Globais -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+            <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800">
+              <p class="text-[10px] text-slate-400">Partidas</p>
+              <p id="profile-stat-matches" class="text-base font-black text-slate-100">0</p>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800">
+              <p class="text-[10px] text-slate-400">Vitórias</p>
+              <p id="profile-stat-wins" class="text-base font-black text-amber-400">0</p>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800">
+              <p class="text-[10px] text-slate-400">Taxa de Vitória</p>
+              <p id="profile-stat-winrate" class="text-base font-black text-emerald-400">0%</p>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800">
+              <p class="text-[10px] text-slate-400">Sequência Atual</p>
+              <p id="profile-stat-streak" class="text-base font-black text-purple-400">0</p>
+            </div>
+          </div>
+
+          <!-- Progresso dos 9 Jogos -->
+          <div class="space-y-2">
+            <h4 class="font-title text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+              Nível & XP por Jogo (9 Jogos)
+            </h4>
+            <div id="profile-games-progress-list" class="space-y-2">
+              <!-- Inserido dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- Botão Zerar Estatísticas -->
+          <div class="border-t border-slate-800 pt-3 text-center">
+            <button id="btn-profile-reset-stats" class="text-[11px] text-red-400/80 hover:text-red-400 underline transition">
+              Zerar Estatísticas e Progresso
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 11: PREVIEW DE JOGOS DA FASE 2           -->
+    <!-- ============================================== -->
+    <div id="modal-phase2-preview" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div class="w-[94vw] max-w-sm tavern-panel border-2 border-indigo-500/60 rounded-3xl p-5 text-center space-y-4 shadow-2xl">
+        <span id="phase2-icon" class="text-5xl">📻</span>
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Arcana Table • Fase 2</span>
+          <h3 id="phase2-name" class="font-title text-lg font-black text-amber-300 mt-1">Sintonia Total</h3>
+          <p id="phase2-subtitle" class="text-xs text-slate-300 italic mt-0.5">Espectro de Opiniões</p>
+          <p id="phase2-desc" class="text-xs text-slate-300 mt-3 leading-relaxed">Descrição</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-[11px] text-indigo-200">
+          🎮 <strong>Disponível na Fase 2!</strong> O módulo deste jogo já está mapeado no catálogo da plataforma e entrará na próxima atualização com modos solo e multiplayer!
+        </div>
+        <button id="btn-close-phase2" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-title text-xs font-bold transition">
+          Fechar
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR FIXA (MOBILE)      -->
+    <!-- ============================================== -->
+    <nav id="mobile-nav-bar" class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#120E1C]/95 backdrop-blur-md border-t border-amber-500/30 px-3 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex items-center justify-around text-[10px] font-bold text-slate-400">
+      <button id="nav-btn-hub" class="flex flex-col items-center gap-0.5 text-amber-400">
+        <span class="text-base">🏛️</span>
+        <span>Clube</span>
+      </button>
+      <button id="nav-btn-cronicas" class="flex flex-col items-center gap-0.5 hover:text-slate-200">
+        <span class="text-base">⚔️</span>
+        <span>Crônicas</span>
+      </button>
+      <button id="nav-btn-levels" class="flex flex-col items-center gap-0.5 hover:text-slate-200">
+        <span class="text-base">📈</span>
+        <span>Níveis</span>
+      </button>
+      <button id="nav-btn-profile" class="flex flex-col items-center gap-0.5 hover:text-slate-200">
+        <span class="text-base">👤</span>
+        <span>Perfil</span>
+      </button>
+    </nav>
 
     <!-- Script Principal -->
     <script type="module" src="/src/main.js"></script>

@@ -31,6 +31,14 @@ import {
   renderReactionBannerHTML,
   renderBluffClassSelectorHTML,
 } from './ui/renderMesa.js';
+import { playerService, AVATARS, calcXPProgress } from './services/playerService.js';
+import { GAMES_CATALOG, CATEGORIES } from './services/platformCatalog.js';
+import { CorteUI } from './games/corte/corteUI.js';
+import { initCorteMatch } from './games/corte/corteLogic.js';
+import { OniricoUI } from './games/onirico/oniricoUI.js';
+import { initOniricoMatch } from './games/onirico/oniricoLogic.js';
+import { SonhosUI } from './games/sonhos/sonhosUI.js';
+import { initSonhosMatch } from './games/sonhos/sonhosLogic.js';
 
 // ==========================================
 // ESTADO GLOBAL DA APLICAÇÃO
@@ -39,16 +47,33 @@ let gameState = null;
 let selectedLeaderId = 'leader_fighter';
 let selectedCardIndex = null;
 let reactionCountdownInterval = null;
+let currentCategoryFilter = 'all';
+let hubSearchQuery = '';
+let activeSubgameUI = null;
 
 // ==========================================
 // ELEMENTOS DO DOM
 // ==========================================
 const DOM = {
   // Telas
+  screenHub: document.getElementById('screen-hub'),
+  screenGameContainer: document.getElementById('screen-game-container'),
   screenLobby: document.getElementById('screen-lobby'),
   screenMesa: document.getElementById('screen-mesa'),
 
-  // Header
+  // Header & Hub
+  btnHeaderHome: document.getElementById('btn-header-home'),
+  btnPlayerPill: document.getElementById('btn-player-pill'),
+  headerAvatar: document.getElementById('header-avatar'),
+  headerNickname: document.getElementById('header-nickname'),
+  headerLevelBadge: document.getElementById('header-level-badge'),
+  btnHubQuickPlay: document.getElementById('btn-hub-quick-play'),
+  btnHubProfile: document.getElementById('btn-hub-profile'),
+  hubGamesGrid: document.getElementById('hub-games-grid'),
+  inputHubSearch: document.getElementById('input-hub-search'),
+  hubCategoryTabs: document.getElementById('hub-category-tabs'),
+
+  // Header Controls
   btnToggleSound: document.getElementById('btn-toggle-sound'),
   btnOpenGameLog: document.getElementById('btn-open-game-log'),
   btnOpenTutorialStep: document.getElementById('btn-open-tutorial-step'),
@@ -144,6 +169,311 @@ const DOM = {
   victoryMessage: document.getElementById('victory-message'),
   btnPlayAgain: document.getElementById('btn-play-again'),
   btnReturnLobby: document.getElementById('btn-return-lobby'),
+
+  // Modal Perfil & Níveis
+  modalPlayerProfile: document.getElementById('modal-player-profile'),
+  btnClosePlayerProfile: document.getElementById('btn-close-player-profile'),
+  profileModalAvatarDisplay: document.getElementById('profile-modal-avatar-display'),
+  profileModalNickname: document.getElementById('profile-modal-nickname'),
+  profileModalLevelPill: document.getElementById('profile-modal-level-pill'),
+  profileModalTitle: document.getElementById('profile-modal-title'),
+  profileModalXpText: document.getElementById('profile-modal-xp-text'),
+  profileModalXpPercent: document.getElementById('profile-modal-xp-percent'),
+  profileModalXpBar: document.getElementById('profile-modal-xp-bar'),
+  profileAvatarsGrid: document.getElementById('profile-avatars-grid'),
+  profileInputNickname: document.getElementById('profile-input-nickname'),
+  btnProfileSaveName: document.getElementById('btn-profile-save-name'),
+  profileStatMatches: document.getElementById('profile-stat-matches'),
+  profileStatWins: document.getElementById('profile-stat-wins'),
+  profileStatWinrate: document.getElementById('profile-stat-winrate'),
+  profileStatStreak: document.getElementById('profile-stat-streak'),
+  profileGamesProgressList: document.getElementById('profile-games-progress-list'),
+  btnProfileResetStats: document.getElementById('btn-profile-reset-stats'),
+
+  // Modal Fase 2
+  modalPhase2Preview: document.getElementById('modal-phase2-preview'),
+  phase2Icon: document.getElementById('phase2-icon'),
+  phase2Name: document.getElementById('phase2-name'),
+  phase2Subtitle: document.getElementById('phase2-subtitle'),
+  phase2Desc: document.getElementById('phase2-desc'),
+  btnClosePhase2: document.getElementById('btn-close-phase2'),
+
+  // Mobile Bottom Nav
+  mobileNavBar: document.getElementById('mobile-nav-bar'),
+  navBtnHub: document.getElementById('nav-btn-hub'),
+  navBtnCronicas: document.getElementById('nav-btn-cronicas'),
+  navBtnLevels: document.getElementById('nav-btn-levels'),
+  navBtnProfile: document.getElementById('nav-btn-profile'),
+};
+
+// ==========================================
+// CONTROLADOR DA PLATAFORMA ARCANA TABLE
+// ==========================================
+export const switchView = (viewName) => {
+  if (DOM.screenHub) DOM.screenHub.classList.add('hidden');
+  if (DOM.screenLobby) DOM.screenLobby.classList.add('hidden');
+  if (DOM.screenMesa) DOM.screenMesa.classList.add('hidden');
+  if (DOM.screenGameContainer) DOM.screenGameContainer.classList.add('hidden');
+
+  if (activeSubgameUI && viewName !== 'game-container') {
+    activeSubgameUI.destroy();
+    activeSubgameUI = null;
+  }
+
+  if (viewName === 'hub') {
+    if (DOM.screenHub) DOM.screenHub.classList.remove('hidden');
+    updateHeaderProfilePill();
+    renderHubGames();
+  } else if (viewName === 'cronicas-lobby') {
+    if (DOM.screenLobby) DOM.screenLobby.classList.remove('hidden');
+    initLobby();
+  } else if (viewName === 'cronicas-mesa') {
+    if (DOM.screenMesa) DOM.screenMesa.classList.remove('hidden');
+  } else if (viewName === 'game-container') {
+    if (DOM.screenGameContainer) DOM.screenGameContainer.classList.remove('hidden');
+  }
+};
+
+export const launchCorteGame = () => {
+  switchView('game-container');
+  const player = playerService.getProfile();
+  const match = initCorteMatch(player, 3);
+  activeSubgameUI = new CorteUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
+export const launchOniricoGame = () => {
+  switchView('game-container');
+  const player = playerService.getProfile();
+  const match = initOniricoMatch(player, 3);
+  activeSubgameUI = new OniricoUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
+export const launchSonhosGame = () => {
+  switchView('game-container');
+  const player = playerService.getProfile();
+  const match = initSonhosMatch(player, 3);
+  activeSubgameUI = new SonhosUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
+export const updateHeaderProfilePill = () => {
+  const profile = playerService.getProfile();
+  if (DOM.headerAvatar) DOM.headerAvatar.textContent = profile.avatar || '🧙‍♂️';
+  if (DOM.headerNickname) DOM.headerNickname.textContent = profile.nickname || 'Jogador';
+  if (DOM.headerLevelBadge) DOM.headerLevelBadge.textContent = `Nv. ${profile.globalLevel || 1}`;
+};
+
+export const renderHubGames = () => {
+  if (!DOM.hubGamesGrid) return;
+  const profile = playerService.getProfile();
+
+  const filtered = GAMES_CATALOG.filter((game) => {
+    const matchesCategory = currentCategoryFilter === 'all' || game.category === currentCategoryFilter;
+    const matchesQuery = !hubSearchQuery || game.name.toLowerCase().includes(hubSearchQuery.toLowerCase()) || game.subtitle.toLowerCase().includes(hubSearchQuery.toLowerCase());
+    return matchesCategory && matchesQuery;
+  });
+
+  DOM.hubGamesGrid.innerHTML = filtered.map((game) => {
+    const gameStat = profile.gameStats[game.id] || { level: 1, xp: 0, matches: 0, wins: 0 };
+    const isPlayable = game.status === 'playable';
+
+    return `
+      <div class="rounded-3xl p-4 sm:p-5 border-2 border-slate-800 bg-gradient-to-b ${game.bgGradient} hover:border-amber-500/50 shadow-xl flex flex-col justify-between transition-all transform hover:-translate-y-1">
+        <div class="space-y-3">
+          <!-- Topo do Card -->
+          <div class="flex items-start justify-between">
+            <span class="text-3xl sm:text-4xl filter drop-shadow">${game.icon}</span>
+            <div class="flex items-center gap-1.5">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black border ${game.badgeColor}">
+                ${game.badge}
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-950/80 text-amber-300 border border-slate-700">
+                Nv. ${gameStat.level}
+              </span>
+            </div>
+          </div>
+
+          <!-- Título e Subtítulo -->
+          <div>
+            <h3 class="font-title text-base sm:text-lg font-black text-slate-100 leading-tight">
+              ${game.name}
+            </h3>
+            <p class="text-[11px] text-amber-400 font-semibold mt-0.5">
+              ${game.subtitle}
+            </p>
+            <span class="inline-block text-[9px] text-purple-300/80 font-mono mt-0.5">
+              Ref: ${game.inspiredBy}
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed line-clamp-3">
+            ${game.description}
+          </p>
+
+          <!-- Metadados -->
+          <div class="flex items-center gap-2 text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+            <span>👥 ${game.minPlayers}-${game.maxPlayers} Jogadores</span>
+            <span>•</span>
+            <span>⏱️ ~${game.estimatedMinutes} min</span>
+            <span>•</span>
+            <span>⚡ ${game.difficulty}</span>
+          </div>
+        </div>
+
+        <!-- Botões de Ação do Jogo -->
+        <div class="pt-4 space-y-1.5">
+          ${
+            isPlayable
+              ? `
+            <button
+              data-game-id="${game.id}"
+              class="btn-play-game-solo w-full min-h-[44px] py-2.5 px-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-title text-xs font-black shadow-md shadow-amber-500/20 uppercase tracking-wider transition transform active:scale-95 flex items-center justify-center gap-1.5"
+            >
+              <span>⚔️</span>
+              <span>Jogar Solo (vs Bots)</span>
+            </button>
+            <button
+              data-game-id="${game.id}"
+              class="btn-play-game-multi w-full py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-amber-300 font-title text-[10px] font-bold border border-slate-800 transition"
+            >
+              👑 Criar / Entrar em Sala
+            </button>
+          `
+              : `
+            <button
+              data-game-id="${game.id}"
+              class="btn-preview-phase2 w-full min-h-[44px] py-2.5 px-3 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-400 font-title text-xs font-bold border border-slate-800 transition flex items-center justify-center gap-1.5"
+            >
+              <span>🔔</span>
+              <span>Em Breve (Fase 2)</span>
+            </button>
+          `
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Eventos de clique nos cards
+  DOM.hubGamesGrid.querySelectorAll('.btn-play-game-solo').forEach((btn) => {
+    btn.onclick = () => {
+      const gId = btn.getAttribute('data-game-id');
+      soundManager.playCardTap();
+      if (gId === 'cronicas') {
+        switchView('cronicas-lobby');
+      } else if (gId === 'corte') {
+        launchCorteGame();
+      } else if (gId === 'onirico') {
+        launchOniricoGame();
+      } else if (gId === 'sonhos') {
+        launchSonhosGame();
+      }
+    };
+  });
+
+  DOM.hubGamesGrid.querySelectorAll('.btn-play-game-multi').forEach((btn) => {
+    btn.onclick = () => {
+      const gId = btn.getAttribute('data-game-id');
+      soundManager.playCardTap();
+      if (gId === 'cronicas') {
+        switchView('cronicas-lobby');
+        DOM.multiplayerDrawer.classList.remove('hidden');
+      } else {
+        if (gId === 'corte') launchCorteGame();
+        else if (gId === 'onirico') launchOniricoGame();
+        else if (gId === 'sonhos') launchSonhosGame();
+      }
+    };
+  });
+
+  DOM.hubGamesGrid.querySelectorAll('.btn-preview-phase2').forEach((btn) => {
+    btn.onclick = () => {
+      const gId = btn.getAttribute('data-game-id');
+      const game = GAMES_CATALOG.find((g) => g.id === gId);
+      if (game) openPhase2PreviewModal(game);
+    };
+  });
+};
+
+export const openPhase2PreviewModal = (game) => {
+  if (!DOM.modalPhase2Preview) return;
+  DOM.phase2Icon.textContent = game.icon;
+  DOM.phase2Name.textContent = game.name;
+  DOM.phase2Subtitle.textContent = `${game.subtitle} (Inspirado em ${game.inspiredBy})`;
+  DOM.phase2Desc.textContent = game.description;
+  DOM.modalPhase2Preview.classList.remove('hidden');
+};
+
+export const openPlayerProfileModal = () => {
+  if (!DOM.modalPlayerProfile) return;
+  const profile = playerService.getProfile();
+  const xpProg = calcXPProgress(profile.globalXP || 0);
+
+  DOM.profileModalAvatarDisplay.textContent = profile.avatar || '🧙‍♂️';
+  DOM.profileModalNickname.textContent = profile.nickname || 'Jogador';
+  DOM.profileModalLevelPill.textContent = `Nv. ${profile.globalLevel || 1}`;
+  DOM.profileModalTitle.textContent = profile.title || 'Iniciado Arcano';
+  DOM.profileModalXpText.textContent = `${profile.globalXP || 0} / ${xpProg.nextLevelXP} XP`;
+  DOM.profileModalXpPercent.textContent = `${xpProg.percent}%`;
+  DOM.profileModalXpBar.style.width = `${xpProg.percent}%`;
+  DOM.profileInputNickname.value = profile.nickname || '';
+
+  // Estatísticas Globais
+  DOM.profileStatMatches.textContent = profile.totalMatches || 0;
+  DOM.profileStatWins.textContent = profile.totalWins || 0;
+  const wr = profile.totalMatches > 0 ? Math.round((profile.totalWins / profile.totalMatches) * 100) : 0;
+  DOM.profileStatWinrate.textContent = `${wr}%`;
+  DOM.profileStatStreak.textContent = profile.winStreak || 0;
+
+  // Grid de Avatares
+  DOM.profileAvatarsGrid.innerHTML = AVATARS.map((av) => {
+    const isSelected = av.emoji === profile.avatar;
+    return `
+      <button data-avatar="${av.emoji}" class="btn-select-profile-avatar p-2 rounded-xl border-2 flex items-center justify-center text-xl transition ${
+        isSelected ? 'border-amber-400 bg-amber-500/20 shadow-md ring-2 ring-amber-400' : 'border-slate-800 bg-black/40 hover:bg-slate-800'
+      }">
+        ${av.emoji}
+      </button>
+    `;
+  }).join('');
+
+  DOM.profileAvatarsGrid.querySelectorAll('.btn-select-profile-avatar').forEach((btn) => {
+    btn.onclick = () => {
+      const chosenAvatar = btn.getAttribute('data-avatar');
+      playerService.updateProfile({ avatar: chosenAvatar });
+      openPlayerProfileModal();
+      updateHeaderProfilePill();
+      soundManager.playCardTap();
+    };
+  });
+
+  // Lista de Progresso dos 9 Jogos
+  DOM.profileGamesProgressList.innerHTML = GAMES_CATALOG.map((game) => {
+    const stat = profile.gameStats[game.id] || { level: 1, xp: 0, matches: 0, wins: 0 };
+    const gProg = calcXPProgress(stat.xp || 0);
+
+    return `
+      <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">${game.icon}</span>
+          <div>
+            <p class="font-bold text-slate-200 leading-tight">${game.name}</p>
+            <p class="text-[10px] text-slate-400">${stat.matches} partidas • ${stat.wins} vitórias</p>
+          </div>
+        </div>
+        <div class="text-right w-24">
+          <span class="text-xs font-black text-amber-400">Nv. ${stat.level}</span>
+          <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1">
+            <div class="h-full bg-amber-500" style="width: ${gProg.percent}%"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  DOM.modalPlayerProfile.classList.remove('hidden');
 };
 
 // ==========================================
@@ -1187,6 +1517,11 @@ const showVictoryScreen = (winner) => {
       ? 'Conquistou a Taverna como o Caçador Supremo ao abater 3 Monstros Lendários!'
       : 'Uniu todas as 6 Classes de Heróis na sua Party com maestria!';
 
+  // Concede XP e atualiza perfil
+  const isHumanWinner = winner.id === 'player_human';
+  playerService.recordGameResult('cronicas', isHumanWinner);
+  updateHeaderProfilePill();
+
   soundManager.playVictoryFanfare();
   DOM.modalVictory.classList.remove('hidden');
 
@@ -1208,8 +1543,7 @@ DOM.btnPlayAgain.onclick = () => {
 DOM.btnReturnLobby.onclick = () => {
   DOM.modalVictory.classList.add('hidden');
   gameState = null;
-  DOM.screenMesa.classList.add('hidden');
-  DOM.screenLobby.classList.remove('hidden');
+  switchView('hub');
 };
 
 // ==========================================
@@ -1225,5 +1559,124 @@ DOM.btnToggleMultiplayer.onclick = () => {
   DOM.multiplayerDrawer.classList.toggle('hidden');
 };
 
-// Inicializa a tela de Lobby na partida
-initLobby();
+// ==========================================
+// EVENTOS GLOBAIS DA PLATAFORMA ARCANA TABLE
+// ==========================================
+// Botão Home no Header
+if (DOM.btnHeaderHome) {
+  DOM.btnHeaderHome.onclick = () => {
+    soundManager.playCardTap();
+    switchView('hub');
+  };
+}
+
+// Perfil / Níveis
+const handleOpenProfile = () => {
+  soundManager.playCardTap();
+  openPlayerProfileModal();
+};
+
+if (DOM.btnPlayerPill) DOM.btnPlayerPill.onclick = handleOpenProfile;
+if (DOM.btnHubProfile) DOM.btnHubProfile.onclick = handleOpenProfile;
+if (DOM.navBtnProfile) DOM.navBtnProfile.onclick = handleOpenProfile;
+if (DOM.navBtnLevels) DOM.navBtnLevels.onclick = handleOpenProfile;
+
+if (DOM.btnClosePlayerProfile) {
+  DOM.btnClosePlayerProfile.onclick = () => {
+    DOM.modalPlayerProfile.classList.add('hidden');
+  };
+}
+
+// Salvar Apelido no Perfil
+if (DOM.btnProfileSaveName) {
+  DOM.btnProfileSaveName.onclick = () => {
+    const newName = DOM.profileInputNickname?.value.trim();
+    if (newName) {
+      playerService.updateProfile({ nickname: newName });
+      updateHeaderProfilePill();
+      openPlayerProfileModal();
+      if (DOM.inputNickname) DOM.inputNickname.value = newName;
+      soundManager.playCardTap();
+    }
+  };
+}
+
+// Zerar Estatísticas
+if (DOM.btnProfileResetStats) {
+  DOM.btnProfileResetStats.onclick = () => {
+    if (confirm('Tem certeza de que deseja zerar todas as estatísticas e progresso de níveis?')) {
+      playerService.resetStats();
+      updateHeaderProfilePill();
+      openPlayerProfileModal();
+      renderHubGames();
+    }
+  };
+}
+
+// Fechar Modal Fase 2
+if (DOM.btnClosePhase2) {
+  DOM.btnClosePhase2.onclick = () => {
+    DOM.modalPhase2Preview.classList.add('hidden');
+  };
+}
+
+// Jogo Rápido Aleatório no Hub
+if (DOM.btnHubQuickPlay) {
+  DOM.btnHubQuickPlay.onclick = () => {
+    soundManager.playCardTap();
+    const playableGames = ['cronicas', 'corte', 'onirico', 'sonhos'];
+    const chosen = playableGames[Math.floor(Math.random() * playableGames.length)];
+    if (chosen === 'cronicas') switchView('cronicas-lobby');
+    else if (chosen === 'corte') launchCorteGame();
+    else if (chosen === 'onirico') launchOniricoGame();
+    else if (chosen === 'sonhos') launchSonhosGame();
+  };
+}
+
+// Abas de Categoria no Hub
+if (DOM.hubCategoryTabs) {
+  DOM.hubCategoryTabs.querySelectorAll('.btn-hub-cat').forEach((btn) => {
+    btn.onclick = () => {
+      soundManager.playCardTap();
+      currentCategoryFilter = btn.getAttribute('data-cat') || 'all';
+
+      DOM.hubCategoryTabs.querySelectorAll('.btn-hub-cat').forEach((b) => {
+        b.className = 'btn-hub-cat px-3 py-1.5 rounded-xl text-xs font-bold font-title border bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200 transition whitespace-nowrap';
+      });
+      btn.className = 'btn-hub-cat px-3 py-1.5 rounded-xl text-xs font-bold font-title border bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm transition whitespace-nowrap';
+
+      renderHubGames();
+    };
+  });
+}
+
+// Pesquisa de Jogos no Hub
+if (DOM.inputHubSearch) {
+  DOM.inputHubSearch.oninput = (e) => {
+    hubSearchQuery = e.target.value.trim();
+    renderHubGames();
+  };
+}
+
+// Navegação Inferior Mobile
+if (DOM.navBtnHub) {
+  DOM.navBtnHub.onclick = () => {
+    soundManager.playCardTap();
+    switchView('hub');
+  };
+}
+if (DOM.navBtnCronicas) {
+  DOM.navBtnCronicas.onclick = () => {
+    soundManager.playCardTap();
+    switchView('cronicas-lobby');
+  };
+}
+
+// Sincroniza apelido do perfil com o input do Lobby
+const currentProf = playerService.getProfile();
+if (DOM.inputNickname && currentProf.nickname) {
+  DOM.inputNickname.value = currentProf.nickname;
+}
+
+// Inicializa a Plataforma no Hub
+switchView('hub');
