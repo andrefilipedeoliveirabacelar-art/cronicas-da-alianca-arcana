@@ -12,6 +12,7 @@ import {
   actActivateHeroAbility,
   actPassTurn,
   actDiscardAndDraw5,
+  canAttackMonster,
   calculateMonsterAttackChance,
 } from './engine/gameLogic.js';
 import { botAI } from './engine/botAI.js';
