@@ -39,6 +39,16 @@ import { OniricoUI } from './games/onirico/oniricoUI.js';
 import { initOniricoMatch } from './games/onirico/oniricoLogic.js';
 import { SonhosUI } from './games/sonhos/sonhosUI.js';
 import { initSonhosMatch } from './games/sonhos/sonhosLogic.js';
+import { SintoniaUI } from './games/sintonia/sintoniaUI.js';
+import { initSintoniaMatch } from './games/sintonia/sintoniaLogic.js';
+import { JukeboxUI } from './games/jukebox/jukeboxUI.js';
+import { initJukeboxMatch } from './games/jukebox/jukeboxLogic.js';
+import { PalavraUI } from './games/palavra/palavraUI.js';
+import { initPalavraMatch } from './games/palavra/palavraLogic.js';
+import { QuemDisseUI } from './games/quemdisse/quemdisseUI.js';
+import { initQuemDisseMatch } from './games/quemdisse/quemdisseLogic.js';
+import { SaberUI } from './games/saber/saberUI.js';
+import { initSaberMatch } from './games/saber/saberLogic.js';
 
 // ==========================================
 // ESTADO GLOBAL DA APLICAÇÃO
@@ -258,6 +268,43 @@ export const launchSonhosGame = () => {
   activeSubgameUI.start(match);
 };
 
+export const launchSintoniaGame = () => {
+  switchView('game-container');
+  const player = playerService.getProfile();
+  const match = initSintoniaMatch(player);
+  activeSubgameUI = new SintoniaUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
+export const launchJukeboxGame = () => {
+  switchView('game-container');
+  const match = initJukeboxMatch();
+  activeSubgameUI = new JukeboxUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
+export const launchPalavraGame = () => {
+  switchView('game-container');
+  const match = initPalavraMatch();
+  activeSubgameUI = new PalavraUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
+export const launchQuemDisseGame = () => {
+  switchView('game-container');
+  const match = initQuemDisseMatch();
+  activeSubgameUI = new QuemDisseUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
+export const launchSaberGame = () => {
+  switchView('game-container');
+  const player = playerService.getProfile();
+  const match = initSaberMatch(player, 3);
+  activeSubgameUI = new SaberUI(DOM.screenGameContainer, playerService, () => switchView('hub'));
+  activeSubgameUI.start(match);
+};
+
 export const updateHeaderProfilePill = () => {
   const profile = playerService.getProfile();
   if (DOM.headerAvatar) DOM.headerAvatar.textContent = profile.avatar || '🧙‍♂️';
@@ -361,15 +408,15 @@ export const renderHubGames = () => {
     btn.onclick = () => {
       const gId = btn.getAttribute('data-game-id');
       soundManager.playCardTap();
-      if (gId === 'cronicas') {
-        switchView('cronicas-lobby');
-      } else if (gId === 'corte') {
-        launchCorteGame();
-      } else if (gId === 'onirico') {
-        launchOniricoGame();
-      } else if (gId === 'sonhos') {
-        launchSonhosGame();
-      }
+      if (gId === 'cronicas') switchView('cronicas-lobby');
+      else if (gId === 'corte') launchCorteGame();
+      else if (gId === 'onirico') launchOniricoGame();
+      else if (gId === 'sonhos') launchSonhosGame();
+      else if (gId === 'sintonia') launchSintoniaGame();
+      else if (gId === 'jukebox') launchJukeboxGame();
+      else if (gId === 'palavra') launchPalavraGame();
+      else if (gId === 'quemdisse') launchQuemDisseGame();
+      else if (gId === 'saber') launchSaberGame();
     };
   });
 
@@ -384,6 +431,11 @@ export const renderHubGames = () => {
         if (gId === 'corte') launchCorteGame();
         else if (gId === 'onirico') launchOniricoGame();
         else if (gId === 'sonhos') launchSonhosGame();
+        else if (gId === 'sintonia') launchSintoniaGame();
+        else if (gId === 'jukebox') launchJukeboxGame();
+        else if (gId === 'palavra') launchPalavraGame();
+        else if (gId === 'quemdisse') launchQuemDisseGame();
+        else if (gId === 'saber') launchSaberGame();
       }
     };
   });
@@ -1624,12 +1676,20 @@ if (DOM.btnClosePhase2) {
 if (DOM.btnHubQuickPlay) {
   DOM.btnHubQuickPlay.onclick = () => {
     soundManager.playCardTap();
-    const playableGames = ['cronicas', 'corte', 'onirico', 'sonhos'];
+    const playableGames = [
+      'cronicas', 'corte', 'onirico', 'sonhos',
+      'sintonia', 'jukebox', 'palavra', 'quemdisse', 'saber'
+    ];
     const chosen = playableGames[Math.floor(Math.random() * playableGames.length)];
     if (chosen === 'cronicas') switchView('cronicas-lobby');
     else if (chosen === 'corte') launchCorteGame();
     else if (chosen === 'onirico') launchOniricoGame();
     else if (chosen === 'sonhos') launchSonhosGame();
+    else if (chosen === 'sintonia') launchSintoniaGame();
+    else if (chosen === 'jukebox') launchJukeboxGame();
+    else if (chosen === 'palavra') launchPalavraGame();
+    else if (chosen === 'quemdisse') launchQuemDisseGame();
+    else if (chosen === 'saber') launchSaberGame();
   };
 }
 

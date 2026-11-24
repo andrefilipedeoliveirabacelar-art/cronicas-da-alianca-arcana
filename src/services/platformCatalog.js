@@ -94,10 +94,10 @@ export const GAMES_CATALOG = [
     estimatedMinutes: 15,
     difficulty: 'Fácil',
     description: 'Gire o ponteiro mental! Duas pontas opostas (ex: "Muito Quente" e "Muito Frio"). Dê a pista perfeita para sua equipe acertar a posição do ponteiro secreto!',
-    badge: 'Fase 2',
-    badgeColor: 'bg-slate-700/40 text-slate-400 border-slate-600/40',
-    status: 'coming_soon',
-    bgGradient: 'from-blue-950/40 via-slate-900/40 to-slate-950/80',
+    badge: 'Mente Aberta',
+    badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+    status: 'playable',
+    bgGradient: 'from-blue-950/60 via-slate-900/50 to-indigo-950/80',
     accentColor: '#3B82F6'
   },
   {
@@ -112,10 +112,10 @@ export const GAMES_CATALOG = [
     estimatedMinutes: 15,
     difficulty: 'Médio',
     description: 'Ouça trechos ou pistas sobre grandes sucessos musicais e ordene as canções na sua linha do tempo cronológica do pop, rock e clássicos mundiais!',
-    badge: 'Fase 2',
-    badgeColor: 'bg-slate-700/40 text-slate-400 border-slate-600/40',
-    status: 'coming_soon',
-    bgGradient: 'from-rose-950/40 via-slate-900/40 to-slate-950/80',
+    badge: 'Musical',
+    badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+    status: 'playable',
+    bgGradient: 'from-rose-950/60 via-purple-950/50 to-slate-950/80',
     accentColor: '#F43F5E'
   },
   {
@@ -130,10 +130,10 @@ export const GAMES_CATALOG = [
     estimatedMinutes: 15,
     difficulty: 'Médio',
     description: 'Faça sua equipe adivinhar a palavra secreta contra o relógio, mas cuidado: 5 palavras proibidas ativarão a buzina se forem pronunciadas!',
-    badge: 'Fase 2',
-    badgeColor: 'bg-slate-700/40 text-slate-400 border-slate-600/40',
-    status: 'coming_soon',
-    bgGradient: 'from-red-950/40 via-slate-900/40 to-slate-950/80',
+    badge: 'Frenético',
+    badgeColor: 'bg-red-500/20 text-red-300 border-red-500/40',
+    status: 'playable',
+    bgGradient: 'from-red-950/60 via-slate-900/50 to-amber-950/80',
     accentColor: '#EF4444'
   },
   {
@@ -148,10 +148,10 @@ export const GAMES_CATALOG = [
     estimatedMinutes: 10,
     difficulty: 'Médio',
     description: 'Filmes icônicos, figuras históricas, animes e games: descubra de quem é a autoria da frase mais emblemática da cultura pop!',
-    badge: 'Fase 2',
-    badgeColor: 'bg-slate-700/40 text-slate-400 border-slate-600/40',
-    status: 'coming_soon',
-    bgGradient: 'from-amber-950/40 via-slate-900/40 to-slate-950/80',
+    badge: 'Cultura Pop',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    status: 'playable',
+    bgGradient: 'from-amber-950/60 via-slate-900/50 to-orange-950/80',
     accentColor: '#F59E0B'
   },
   {
@@ -166,10 +166,10 @@ export const GAMES_CATALOG = [
     estimatedMinutes: 15,
     difficulty: 'Médio',
     description: 'Perguntas com respostas numéricas! Ninguém precisa saber a resposta exata: dê seu melhor palpite e aposte fichas na resposta mais próxima!',
-    badge: 'Fase 2',
-    badgeColor: 'bg-slate-700/40 text-slate-400 border-slate-600/40',
-    status: 'coming_soon',
-    bgGradient: 'from-cyan-950/40 via-slate-900/40 to-slate-950/80',
-    accentColor: '#06B6D4'
+    badge: 'Apostas',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    status: 'playable',
+    bgGradient: 'from-emerald-950/60 via-slate-900/50 to-teal-950/80',
+    accentColor: '#10B981'
   }
 ];
