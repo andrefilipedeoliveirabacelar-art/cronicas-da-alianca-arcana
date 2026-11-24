@@ -32,6 +32,7 @@ import {
   renderBluffClassSelectorHTML,
 } from './ui/renderMesa.js';
 import { playerService, AVATARS, calcXPProgress } from './services/playerService.js';
+import { authService } from './services/authService.js';
 import { GAMES_CATALOG, CATEGORIES } from './services/platformCatalog.js';
 import { CorteUI } from './games/corte/corteUI.js';
 import { initCorteMatch } from './games/corte/corteLogic.js';
@@ -214,6 +215,54 @@ const DOM = {
   navBtnCronicas: document.getElementById('nav-btn-cronicas'),
   navBtnLevels: document.getElementById('nav-btn-levels'),
   navBtnProfile: document.getElementById('nav-btn-profile'),
+
+  // Auth & Master
+  btnOpenMaster: document.getElementById('btn-open-master'),
+  btnOpenAuth: document.getElementById('btn-open-auth'),
+
+  // Modal Auth
+  modalAuth: document.getElementById('modal-auth'),
+  btnCloseAuth: document.getElementById('btn-close-auth'),
+  tabAuthLogin: document.getElementById('tab-auth-login'),
+  tabAuthRegister: document.getElementById('tab-auth-register'),
+  tabAuthForgot: document.getElementById('tab-auth-forgot'),
+  authViewLogin: document.getElementById('auth-panel-login'),
+  authViewRegister: document.getElementById('auth-panel-register'),
+  authViewForgot: document.getElementById('auth-panel-forgot'),
+  authViewReset: document.getElementById('auth-panel-reset'),
+  authErrorMsg: document.getElementById('auth-feedback-msg'),
+  loginEmail: document.getElementById('login-email'),
+  loginPassword: document.getElementById('login-password'),
+  btnSubmitLogin: document.getElementById('btn-submit-login'),
+  btnLoginGuest: document.getElementById('btn-login-guest'),
+  btnGotoForgot: document.getElementById('btn-goto-forgot'),
+  regName: document.getElementById('reg-name'),
+  regEmail: document.getElementById('reg-email'),
+  regPassword: document.getElementById('reg-password'),
+  regPasswordConfirm: document.getElementById('reg-password-confirm'),
+  regLgpdCheckbox: document.getElementById('reg-lgpd-checkbox'),
+  btnOpenLgpdTerms: document.getElementById('btn-open-lgpd-terms'),
+  btnSubmitRegister: document.getElementById('btn-submit-register'),
+  forgotEmail: document.getElementById('forgot-email'),
+  btnSubmitForgot: document.getElementById('btn-submit-forgot'),
+  forgotFeedbackBox: document.getElementById('forgot-feedback-box'),
+  btnOpenResetFlow: document.getElementById('btn-open-reset-flow'),
+  resetNewPassword: document.getElementById('reset-new-password'),
+  btnSubmitNewPassword: document.getElementById('btn-submit-new-password'),
+
+  // Modal LGPD Terms
+  modalLgpdTerms: document.getElementById('modal-lgpd-terms'),
+  btnCloseLgpdTerms: document.getElementById('btn-close-lgpd-terms'),
+  btnAcceptLgpdTerms: document.getElementById('btn-accept-lgpd-terms'),
+
+  // Modal Master Panel
+  modalMasterPanel: document.getElementById('modal-master-panel'),
+  btnCloseMasterPanel: document.getElementById('btn-close-master-panel'),
+  masterUsersList: document.getElementById('master-users-list'),
+  masterUserCount: document.getElementById('master-user-count'),
+
+  // LGPD Art 18 no Perfil
+  btnProfileDeleteAccount: document.getElementById('btn-profile-delete-account'),
 };
 
 // ==========================================
@@ -307,9 +356,43 @@ export const launchSaberGame = () => {
 
 export const updateHeaderProfilePill = () => {
   const profile = playerService.getProfile();
-  if (DOM.headerAvatar) DOM.headerAvatar.textContent = profile.avatar || '🧙‍♂️';
-  if (DOM.headerNickname) DOM.headerNickname.textContent = profile.nickname || 'Jogador';
-  if (DOM.headerLevelBadge) DOM.headerLevelBadge.textContent = `Nv. ${profile.globalLevel || 1}`;
+  const session = authService.getCurrentSession();
+
+  const currentAvatar = (session && session.avatar) || profile.avatar || '🧙‍♂️';
+  const currentNickname = (session && session.nickname) || profile.nickname || 'Jogador';
+
+  if (DOM.headerAvatar) DOM.headerAvatar.textContent = currentAvatar;
+  if (DOM.headerNickname) DOM.headerNickname.textContent = currentNickname;
+
+  if (DOM.headerLevelBadge) {
+    if (session && session.role === 'master') {
+      DOM.headerLevelBadge.textContent = '👑 MASTER';
+      DOM.headerLevelBadge.className = 'text-[9px] font-black uppercase tracking-wider text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40';
+    } else {
+      DOM.headerLevelBadge.textContent = `Nv. ${profile.globalLevel || 1}`;
+      DOM.headerLevelBadge.className = 'text-[9px] font-black uppercase tracking-wider text-amber-400 bg-black/40 px-1.5 py-0.5 rounded';
+    }
+  }
+
+  // Visibilidade do Botão Painel Master
+  if (DOM.btnOpenMaster) {
+    if (authService.isMaster()) {
+      DOM.btnOpenMaster.classList.remove('hidden');
+    } else {
+      DOM.btnOpenMaster.classList.add('hidden');
+    }
+  }
+
+  // Botão Entrar / Sair no Header
+  if (DOM.btnOpenAuth) {
+    if (session && !session.isGuest) {
+      DOM.btnOpenAuth.textContent = '🚪 Sair';
+      DOM.btnOpenAuth.title = `Conectado como ${session.email}`;
+    } else {
+      DOM.btnOpenAuth.textContent = '🔑 Entrar';
+      DOM.btnOpenAuth.title = 'Entrar ou Cadastrar-se';
+    }
+  }
 };
 
 export const renderHubGames = () => {
@@ -461,16 +544,30 @@ export const openPhase2PreviewModal = (game) => {
 export const openPlayerProfileModal = () => {
   if (!DOM.modalPlayerProfile) return;
   const profile = playerService.getProfile();
+  const session = authService.getCurrentSession();
   const xpProg = calcXPProgress(profile.globalXP || 0);
 
-  DOM.profileModalAvatarDisplay.textContent = profile.avatar || '🧙‍♂️';
-  DOM.profileModalNickname.textContent = profile.nickname || 'Jogador';
-  DOM.profileModalLevelPill.textContent = `Nv. ${profile.globalLevel || 1}`;
-  DOM.profileModalTitle.textContent = profile.title || 'Iniciado Arcano';
+  DOM.profileModalAvatarDisplay.textContent = (session && session.avatar) || profile.avatar || '🧙‍♂️';
+  DOM.profileModalNickname.textContent = (session && session.nickname) || profile.nickname || 'Jogador';
+  
+  if (session && session.role === 'master') {
+    DOM.profileModalLevelPill.textContent = '👑 MASTER';
+    DOM.profileModalLevelPill.className = 'text-xs font-black uppercase text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/40';
+  } else {
+    DOM.profileModalLevelPill.textContent = `Nv. ${profile.globalLevel || 1}`;
+    DOM.profileModalLevelPill.className = 'text-xs font-black uppercase text-amber-400 bg-black/50 px-2.5 py-0.5 rounded-full border border-amber-500/30';
+  }
+
+  if (session && !session.isGuest) {
+    DOM.profileModalTitle.textContent = `${profile.title || 'Iniciado Arcano'} • ${session.email}`;
+  } else {
+    DOM.profileModalTitle.textContent = `${profile.title || 'Iniciado Arcano'} • Modo Visitante`;
+  }
+
   DOM.profileModalXpText.textContent = `${profile.globalXP || 0} / ${xpProg.nextLevelXP} XP`;
   DOM.profileModalXpPercent.textContent = `${xpProg.percent}%`;
   DOM.profileModalXpBar.style.width = `${xpProg.percent}%`;
-  DOM.profileInputNickname.value = profile.nickname || '';
+  DOM.profileInputNickname.value = (session && session.nickname) || profile.nickname || '';
 
   // Estatísticas Globais
   DOM.profileStatMatches.textContent = profile.totalMatches || 0;
@@ -1736,6 +1833,357 @@ if (DOM.navBtnCronicas) {
 const currentProf = playerService.getProfile();
 if (DOM.inputNickname && currentProf.nickname) {
   DOM.inputNickname.value = currentProf.nickname;
+}
+
+// ==========================================
+// AUTENTICAÇÃO, LGPD, MASTER & RECUPERAÇÃO DE SENHA
+// ==========================================
+let currentResetToken = null;
+
+const showAuthError = (msg) => {
+  if (DOM.authErrorMsg) {
+    DOM.authErrorMsg.textContent = msg;
+    DOM.authErrorMsg.classList.remove('hidden');
+  }
+};
+
+const clearAuthError = () => {
+  if (DOM.authErrorMsg) {
+    DOM.authErrorMsg.textContent = '';
+    DOM.authErrorMsg.classList.add('hidden');
+  }
+};
+
+const switchAuthTab = (viewName) => {
+  clearAuthError();
+  if (DOM.authViewLogin) DOM.authViewLogin.classList.toggle('hidden', viewName !== 'login');
+  if (DOM.authViewRegister) DOM.authViewRegister.classList.toggle('hidden', viewName !== 'register');
+  if (DOM.authViewForgot) DOM.authViewForgot.classList.toggle('hidden', viewName !== 'forgot');
+  if (DOM.authViewReset) DOM.authViewReset.classList.toggle('hidden', viewName !== 'reset');
+
+  if (DOM.tabAuthLogin) {
+    DOM.tabAuthLogin.className = viewName === 'login'
+      ? 'flex-1 py-3 text-xs font-bold font-title border-b-2 border-amber-400 text-amber-300 transition'
+      : 'flex-1 py-3 text-xs font-bold font-title text-slate-400 hover:text-slate-200 transition';
+  }
+  if (DOM.tabAuthRegister) {
+    DOM.tabAuthRegister.className = viewName === 'register'
+      ? 'flex-1 py-3 text-xs font-bold font-title border-b-2 border-amber-400 text-amber-300 transition'
+      : 'flex-1 py-3 text-xs font-bold font-title text-slate-400 hover:text-slate-200 transition';
+  }
+  if (DOM.tabAuthForgot) {
+    DOM.tabAuthForgot.className = (viewName === 'forgot' || viewName === 'reset')
+      ? 'flex-1 py-3 text-xs font-bold font-title border-b-2 border-amber-400 text-amber-300 transition'
+      : 'flex-1 py-3 text-xs font-bold font-title text-slate-400 hover:text-slate-200 transition';
+  }
+};
+
+const openAuthModal = (initialTab = 'login') => {
+  switchAuthTab(initialTab);
+  if (DOM.modalAuth) DOM.modalAuth.classList.remove('hidden');
+};
+
+const closeAuthModal = () => {
+  if (DOM.modalAuth) DOM.modalAuth.classList.add('hidden');
+  clearAuthError();
+};
+
+if (DOM.btnOpenAuth) {
+  DOM.btnOpenAuth.onclick = () => {
+    soundManager.playCardTap();
+    const session = authService.getCurrentSession();
+    if (session && !session.isGuest) {
+      if (confirm(`Deseja desconectar a conta ${session.email}?`)) {
+        authService.logout();
+        updateHeaderProfilePill();
+        alert('Você foi desconectado com segurança.');
+      }
+    } else {
+      openAuthModal('login');
+    }
+  };
+}
+
+if (DOM.btnCloseAuth) DOM.btnCloseAuth.onclick = closeAuthModal;
+if (DOM.tabAuthLogin) DOM.tabAuthLogin.onclick = () => switchAuthTab('login');
+if (DOM.tabAuthRegister) DOM.tabAuthRegister.onclick = () => switchAuthTab('register');
+if (DOM.tabAuthForgot) DOM.tabAuthForgot.onclick = () => switchAuthTab('forgot');
+if (DOM.btnGotoForgot) DOM.btnGotoForgot.onclick = () => switchAuthTab('forgot');
+
+// Login
+if (DOM.btnSubmitLogin) {
+  DOM.btnSubmitLogin.onclick = async () => {
+    clearAuthError();
+    const email = DOM.loginEmail?.value.trim();
+    const password = DOM.loginPassword?.value;
+
+    if (!email || !password) {
+      showAuthError('Preencha o e-mail e a senha.');
+      return;
+    }
+
+    try {
+      const session = await authService.login({ email, password });
+      playerService.updateProfile({ nickname: session.nickname, avatar: session.avatar });
+      updateHeaderProfilePill();
+      closeAuthModal();
+      soundManager.playVictoryFanfare();
+      alert(`Bem-vindo de volta, ${session.nickname}!`);
+    } catch (err) {
+      showAuthError(err.message || 'Erro ao realizar login.');
+    }
+  };
+}
+
+// Visitante
+if (DOM.btnLoginGuest) {
+  DOM.btnLoginGuest.onclick = () => {
+    soundManager.playCardTap();
+    const session = authService.loginAsGuest();
+    playerService.updateProfile({ nickname: session.nickname, avatar: session.avatar });
+    updateHeaderProfilePill();
+    closeAuthModal();
+  };
+}
+
+// Cadastro com LGPD
+if (DOM.btnSubmitRegister) {
+  DOM.btnSubmitRegister.onclick = async () => {
+    clearAuthError();
+    const nickname = DOM.regName?.value.trim();
+    const email = DOM.regEmail?.value.trim();
+    const password = DOM.regPassword?.value;
+    const passwordConfirm = DOM.regPasswordConfirm?.value;
+    const lgpdConsent = DOM.regLgpdCheckbox?.checked;
+
+    if (!lgpdConsent) {
+      showAuthError('Você deve concordar com os Termos de Privacidade e LGPD para se cadastrar.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      showAuthError('A senha deve conter no mínimo 6 caracteres.');
+      return;
+    }
+    if (password !== passwordConfirm) {
+      showAuthError('As senhas digitadas não coincidem.');
+      return;
+    }
+
+    try {
+      const session = await authService.register({
+        email,
+        password,
+        nickname,
+        avatar: '🧙‍♂️',
+        lgpdConsent: true
+      });
+      playerService.updateProfile({ nickname: session.nickname, avatar: session.avatar });
+      updateHeaderProfilePill();
+      closeAuthModal();
+      soundManager.playVictoryFanfare();
+      alert(`Conta criada com sucesso! Seja bem-vindo(a), ${session.nickname}.`);
+    } catch (err) {
+      showAuthError(err.message || 'Erro ao criar conta.');
+    }
+  };
+}
+
+// Modal de Termos LGPD
+if (DOM.btnOpenLgpdTerms) {
+  DOM.btnOpenLgpdTerms.onclick = (e) => {
+    e.preventDefault();
+    if (DOM.modalLgpdTerms) DOM.modalLgpdTerms.classList.remove('hidden');
+  };
+}
+if (DOM.btnCloseLgpdTerms) {
+  DOM.btnCloseLgpdTerms.onclick = () => {
+    if (DOM.modalLgpdTerms) DOM.modalLgpdTerms.classList.add('hidden');
+  };
+}
+if (DOM.btnAcceptLgpdTerms) {
+  DOM.btnAcceptLgpdTerms.onclick = () => {
+    if (DOM.regLgpdCheckbox) DOM.regLgpdCheckbox.checked = true;
+    if (DOM.modalLgpdTerms) DOM.modalLgpdTerms.classList.add('hidden');
+  };
+}
+
+// Solicitação de Recuperação de Senha
+if (DOM.btnSubmitForgot) {
+  DOM.btnSubmitForgot.onclick = () => {
+    clearAuthError();
+    const email = DOM.forgotEmail?.value.trim();
+    if (!email) {
+      showAuthError('Digite seu e-mail cadastrado.');
+      return;
+    }
+
+    try {
+      const res = authService.requestPasswordReset(email);
+      currentResetToken = res.token;
+      if (DOM.forgotFeedbackBox) {
+        DOM.forgotFeedbackBox.classList.remove('hidden');
+      }
+    } catch (err) {
+      showAuthError(err.message || 'Erro ao solicitar redefinição.');
+    }
+  };
+}
+
+if (DOM.btnOpenResetFlow) {
+  DOM.btnOpenResetFlow.onclick = () => {
+    switchAuthTab('reset');
+  };
+}
+
+// Redefinir Nova Senha
+if (DOM.btnSubmitNewPassword) {
+  DOM.btnSubmitNewPassword.onclick = async () => {
+    clearAuthError();
+    const newPass = DOM.resetNewPassword?.value;
+
+    if (!newPass || newPass.length < 6) {
+      showAuthError('A nova senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+    if (!currentResetToken) {
+      showAuthError('Token de recuperação não identificado.');
+      return;
+    }
+
+    try {
+      await authService.resetPasswordWithToken(currentResetToken, newPass);
+      currentResetToken = null;
+      alert('Senha redefinida com sucesso! Você já pode fazer login com a nova senha.');
+      switchAuthTab('login');
+    } catch (err) {
+      showAuthError(err.message || 'Erro ao redefinir senha.');
+    }
+  };
+}
+
+// Verificar Token na URL (#reset-token=...)
+const checkUrlResetToken = () => {
+  const hash = window.location.hash;
+  if (hash.includes('reset-token=')) {
+    const match = hash.match(/reset-token=([^&]+)/);
+    if (match && match[1]) {
+      currentResetToken = match[1];
+      openAuthModal('reset');
+    }
+  }
+};
+window.addEventListener('hashchange', checkUrlResetToken);
+checkUrlResetToken();
+
+// Painel Master
+export const renderMasterUsersList = () => {
+  if (!DOM.masterUsersList) return;
+  const users = authService.getAllUsersForMaster();
+  if (DOM.masterUserCount) DOM.masterUserCount.textContent = users.length;
+
+  DOM.masterUsersList.innerHTML = users.map((u) => {
+    const isMasterRole = u.role === 'master';
+    return `
+      <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">${u.avatar || '🧙‍♂️'}</span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-amber-300 text-sm">${u.nickname}</span>
+              ${isMasterRole ? '<span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase">Master</span>' : '<span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px]">Jogador</span>'}
+            </div>
+            <p class="text-slate-400 text-[11px] font-mono">${u.email}</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">LGPD: ${new Date(u.lgpdConsentDate).toLocaleDateString('pt-BR')} • Cadastrado em: ${new Date(u.createdAt).toLocaleDateString('pt-BR')}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 self-end md:self-center">
+          <button data-user-id="${u.id}" data-user-email="${u.email}" class="btn-master-change-pass px-2.5 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 transition text-[11px] font-bold">
+            🔑 Alterar Senha
+          </button>
+          ${!isMasterRole ? `
+            <button data-user-id="${u.id}" data-user-email="${u.email}" class="btn-master-delete-user px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500/40 text-rose-300 transition text-[11px] font-bold">
+              🗑️ Excluir
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  DOM.masterUsersList.querySelectorAll('.btn-master-change-pass').forEach((btn) => {
+    btn.onclick = async () => {
+      const uId = btn.getAttribute('data-user-id');
+      const uEmail = btn.getAttribute('data-user-email');
+      const newPass = prompt(`Digite a nova senha para o usuário ${uEmail} (mínimo 6 caracteres):`);
+      if (newPass) {
+        try {
+          await authService.masterChangeUserPassword(uId, newPass);
+          alert(`Senha do usuário ${uEmail} alterada com sucesso pelo Master!`);
+        } catch (err) {
+          alert('Erro ao alterar senha: ' + err.message);
+        }
+      }
+    };
+  });
+
+  DOM.masterUsersList.querySelectorAll('.btn-master-delete-user').forEach((btn) => {
+    btn.onclick = () => {
+      const uId = btn.getAttribute('data-user-id');
+      const uEmail = btn.getAttribute('data-user-email');
+      if (confirm(`Excluir permanentemente todos os dados e conta do usuário ${uEmail} (LGPD Art. 18)?`)) {
+        try {
+          authService.deleteUserAccount(uId);
+          renderMasterUsersList();
+          alert(`Usuário ${uEmail} removido com sucesso.`);
+        } catch (err) {
+          alert('Erro ao excluir usuário: ' + err.message);
+        }
+      }
+    };
+  });
+};
+
+if (DOM.btnOpenMaster) {
+  DOM.btnOpenMaster.onclick = () => {
+    soundManager.playCardTap();
+    renderMasterUsersList();
+    if (DOM.modalMasterPanel) DOM.modalMasterPanel.classList.remove('hidden');
+  };
+}
+if (DOM.btnCloseMasterPanel) {
+  DOM.btnCloseMasterPanel.onclick = () => {
+    if (DOM.modalMasterPanel) DOM.modalMasterPanel.classList.add('hidden');
+  };
+}
+
+// LGPD Art. 18: Direito ao Esquecimento no Perfil
+if (DOM.btnProfileDeleteAccount) {
+  DOM.btnProfileDeleteAccount.onclick = () => {
+    const session = authService.getCurrentSession();
+    if (!session || session.isGuest) {
+      if (confirm('Deseja limpar todos os dados salvos localmente deste visitante?')) {
+        playerService.resetStats();
+        updateHeaderProfilePill();
+        if (DOM.modalPlayerProfile) DOM.modalPlayerProfile.classList.add('hidden');
+        renderHubGames();
+        alert('Dados locais limpos.');
+      }
+      return;
+    }
+
+    if (confirm(`Atenção (LGPD Art. 18): Deseja revogar seu consentimento e excluir permanentemente sua conta (${session.email}) e todo seu histórico de dados?\n\nEsta ação é irreversível.`)) {
+      try {
+        authService.deleteUserAccount(session.id);
+        playerService.resetStats();
+        updateHeaderProfilePill();
+        if (DOM.modalPlayerProfile) DOM.modalPlayerProfile.classList.add('hidden');
+        renderHubGames();
+        alert('Sua conta e dados pessoais foram excluídos com sucesso, conforme o Art. 18 da LGPD.');
+      } catch (err) {
+        alert('Erro ao excluir conta: ' + err.message);
+      }
+    }
+  };
 }
 
 // Inicializa a Plataforma no Hub
