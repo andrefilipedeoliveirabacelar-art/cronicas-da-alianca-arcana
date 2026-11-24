@@ -351,13 +351,13 @@ export const renderThumbZoneHTML = (player, isMyTurn, currentPA, maxPA) => {
   const hand = player.hand || [];
 
   return `
-    <div class="w-full space-y-1.5 pt-1 border-t border-slate-800/80 bg-tavern-wood/95">
+    <div class="w-full space-y-1.5 pt-1.5 sticky bottom-0 z-40 bg-[#140F1D]/95 backdrop-blur-md border-t-2 border-amber-500/40 shadow-2xl pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <!-- Mão de Cartas em Carrossel Horizontal Suave (snap-x) -->
-      <div class="flex items-center gap-2 overflow-x-auto snap-x no-scrollbar px-2 py-1">
+      <div class="flex items-center gap-2 overflow-x-auto snap-x no-scrollbar px-3 py-1">
         ${
           hand.length === 0
             ? `
-          <div class="w-full text-center py-4 text-xs text-slate-500 italic">
+          <div class="w-full text-center py-3 text-xs text-slate-500 italic">
             Sua mão está vazia. Toque em "Comprar (1 PA)" abaixo!
           </div>
         `
@@ -385,7 +385,7 @@ export const renderThumbZoneHTML = (player, isMyTurn, currentPA, maxPA) => {
                     <button
                       type="button"
                       data-hand-index="${idx}"
-                      class="btn-select-hand-card flex-shrink-0 snap-start w-20 sm:w-24 h-28 sm:h-32 rounded-xl border-2 p-1.5 flex flex-col justify-between card-chunky transition transform active:scale-95 bg-gradient-to-b from-slate-900 to-slate-950 text-left"
+                      class="btn-select-hand-card flex-shrink-0 snap-start w-20 sm:w-24 h-28 sm:h-32 rounded-xl border-2 p-1.5 flex flex-col justify-between card-chunky transition transform active:scale-95 bg-gradient-to-b from-slate-900 to-slate-950 text-left hover:border-amber-400"
                       style="border-color: ${borderColor};"
                     >
                       <div class="flex items-center justify-between">
@@ -401,7 +401,7 @@ export const renderThumbZoneHTML = (player, isMyTurn, currentPA, maxPA) => {
                         </div>
                       </div>
 
-                      <div class="text-[8px] text-slate-400 text-center uppercase tracking-wider">
+                      <div class="text-[8px] text-amber-400 font-bold text-center uppercase tracking-wider">
                         Toque p/ Jogar
                       </div>
                     </button>
@@ -411,10 +411,10 @@ export const renderThumbZoneHTML = (player, isMyTurn, currentPA, maxPA) => {
         }
       </div>
 
-      <!-- Barra Inferior Fixa ao Alcance do Polegar -->
-      <div class="flex items-center justify-between gap-2 px-2 pb-1.5 pt-0.5">
+      <!-- Barra Inferior Fixa ao Alcance do Polegar (Min. 48px Touch Target) -->
+      <div class="flex items-center justify-between gap-2 px-3 pt-0.5">
         <!-- Cristais de Ação (PA) -->
-        <div class="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-800">
+        <div class="flex items-center gap-1.5 bg-slate-950/90 px-3 py-2 rounded-xl border border-slate-800">
           <div class="flex items-center gap-1">
             ${Array.from({ length: maxPA })
               .map((_, i) => `<span class="pa-crystal ${i < currentPA ? '' : 'empty'}"></span>`)
@@ -431,7 +431,7 @@ export const renderThumbZoneHTML = (player, isMyTurn, currentPA, maxPA) => {
           <button
             id="btn-act-draw"
             ${!isMyTurn || currentPA < 1 ? 'disabled' : ''}
-            class="min-h-[44px] px-3.5 py-2 rounded-xl border border-cyan-500/50 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 font-title text-xs font-bold uppercase tracking-wider transition card-chunky flex items-center gap-1.5 ${
+            class="min-h-[48px] px-3.5 py-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 font-title text-xs font-bold uppercase tracking-wider transition card-chunky flex items-center gap-1.5 ${
               !isMyTurn || currentPA < 1 ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'
             }"
           >
@@ -443,7 +443,7 @@ export const renderThumbZoneHTML = (player, isMyTurn, currentPA, maxPA) => {
           <button
             id="btn-act-pass"
             ${!isMyTurn ? 'disabled' : ''}
-            class="min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider transition card-chunky shadow-tavern-glow ${
+            class="min-h-[48px] px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider transition card-chunky shadow-tavern-glow ${
               !isMyTurn ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'
             }"
           >
@@ -467,36 +467,47 @@ export const renderReactionBannerHTML = (reaction, myPlayerId, myHand) => {
   const modifierCards = myHand.filter((c) => c.type === 'modifier');
 
   return `
-    <div class="fixed inset-x-3 top-20 z-50 max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-purple-950 via-slate-950 to-pink-950 border-2 border-pink-500 shadow-bluff-glow text-center space-y-3 drawer-slide-up">
-      <div class="flex items-center justify-between border-b border-pink-500/40 pb-2">
-        <span class="font-title text-xs font-black uppercase text-pink-300 tracking-wider">
-          ⚔️ Janela de Reação & Blefe (${reaction.timeRemaining}s)
+    <div class="fixed inset-x-3 top-16 sm:top-20 z-50 max-w-md mx-auto p-4 rounded-3xl bg-gradient-to-b from-[#25101A] via-slate-950 to-[#190C1C] border-2 border-red-500 shadow-2xl text-center space-y-3 drawer-slide-up ring-4 ring-red-500/30 animate-pulse">
+      
+      <!-- Topo com Timer Regressivo de 6s -->
+      <div class="flex items-center justify-between border-b border-red-500/40 pb-2">
+        <span class="font-title text-xs font-black uppercase text-red-400 tracking-wider flex items-center gap-1.5">
+          <span>⚔️</span>
+          <span>JANELA DE BLEFE & CONTESTAÇÃO</span>
         </span>
-        <span class="w-3 h-3 rounded-full bg-pink-500 animate-ping"></span>
+        <span class="px-2 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-mono font-bold">
+          ${reaction.timeRemaining}s
+        </span>
+      </div>
+
+      <!-- Barra de progresso regressiva -->
+      <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div class="h-full bg-red-500 transition-all duration-1000 ease-linear" style="width: ${(reaction.timeRemaining / 6) * 100}%"></div>
       </div>
 
       <div class="text-xs sm:text-sm text-slate-200">
         <span class="font-bold text-amber-300">${reaction.initiatorName}</span> baixou uma carta:
         <div class="font-title text-sm sm:text-base font-black text-pink-300 mt-1">
-          ${isBluff ? `🎭 MODO BLEFE alegando ser [${declaredClass}]!` : `[${reaction.card.name}]`}
+          ${isBluff ? `🎭 MODO BLEFE declarando ser [${declaredClass}]!` : `[${reaction.card.name}]`}
         </div>
       </div>
 
       ${
         !isMe
           ? `
-        <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
-          <!-- Botão Desafiar Blefe -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
+          <!-- Botão Gigante Gritar Mentira (min-h-[48px]) -->
           <button
             id="btn-challenge-bluff"
-            class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-title text-xs sm:text-sm font-black uppercase tracking-wider transition shadow-lg card-chunky active:scale-95 animate-pulse"
+            class="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-title text-sm font-black uppercase tracking-wider transition shadow-2xl card-chunky active:scale-95 flex items-center justify-center gap-2 border-2 border-red-400"
           >
-            🚨 MENTIRA! (Desafiar)
+            <span>🚨</span>
+            <span>GRITAR MENTIRA!</span>
           </button>
           
           <button
             id="btn-pass-reaction"
-            class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold uppercase transition"
+            class="w-full sm:w-auto min-h-[44px] px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold uppercase transition"
           >
             ✓ Deixar Passar
           </button>
@@ -507,7 +518,7 @@ export const renderReactionBannerHTML = (reaction, myPlayerId, myHand) => {
           modifierCards.length > 0
             ? `
           <div class="border-t border-slate-800 pt-2 space-y-1">
-            <span class="text-[10px] text-slate-400 font-semibold uppercase">Jogar Modificador da Mão:</span>
+            <span class="text-[10px] text-slate-400 font-semibold uppercase">Jogar Modificador Rápido:</span>
             <div class="flex items-center justify-center gap-1.5 flex-wrap">
               ${modifierCards
                 .map(
@@ -515,9 +526,10 @@ export const renderReactionBannerHTML = (reaction, myPlayerId, myHand) => {
                 <button
                   type="button"
                   data-mod-id="${m.instanceId}"
-                  class="btn-quick-modifier px-2.5 py-1 rounded-lg bg-rose-950/80 border border-rose-500/50 hover:bg-rose-900 text-rose-200 text-[10px] font-bold transition"
+                  class="btn-quick-modifier min-h-[38px] px-3 py-1.5 rounded-xl bg-rose-950/90 border border-rose-500/60 hover:bg-rose-900 text-rose-200 text-xs font-bold transition flex items-center gap-1"
                 >
-                  ${m.name} (${m.bonus >= 0 ? `+${m.bonus}` : m.bonus})
+                  <span>🎲</span>
+                  <span>${m.name} (${m.bonus >= 0 ? `+${m.bonus}` : m.bonus})</span>
                 </button>
               `
                 )
@@ -529,8 +541,8 @@ export const renderReactionBannerHTML = (reaction, myPlayerId, myHand) => {
         }
       `
           : `
-        <div class="text-xs text-amber-400/80 italic py-1">
-          Aguardando a reação dos nobres da taverna à sua jogada...
+        <div class="text-xs text-amber-400/80 italic py-2">
+          Aguardando a reação dos outros heróis à sua jogada...
         </div>
       `
       }

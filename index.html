@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Heroes Love to Lie | Taverna Caótica & Caça a Monstros</title>
+    <title>Crônicas da Aliança Arcana | Blefe, Heróis & Caça a Monstros</title>
     
     <!-- Google Fonts: Cinzel & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,7 +15,7 @@
 
     <link rel="stylesheet" href="/src/style.css" />
   </head>
-  <body class="bg-tavern-dark text-slate-100 flex flex-col font-inter h-[100dvh] max-h-[100dvh] overflow-hidden select-none">
+  <body class="bg-tavern-dark text-slate-100 flex flex-col font-inter min-h-[100dvh] select-none">
 
     <!-- CABEÇALHO GLOBAL COMPACTO -->
     <header class="w-full flex-shrink-0 border-b border-tavern-woodBorder bg-tavern-wood/95 backdrop-blur-md px-3 py-2 flex items-center justify-between z-40 shadow-md">
@@ -23,13 +23,13 @@
         <span class="text-xl filter drop-shadow">🎭</span>
         <div>
           <h1 class="font-title text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-pink-400 tracking-wider">
-            HEROES LOVE TO LIE
+            CRÔNICAS DA ALIANÇA ARCANA
           </h1>
-          <p class="text-[9px] text-slate-400 font-medium">Taverna Caótica & Blefe Arcana</p>
+          <p class="text-[9px] text-slate-400 font-medium">Blefe, Heróis & Caça a Monstros</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5 sm:gap-2">
         <!-- Som / Efeitos Sonoros -->
         <button
           id="btn-toggle-sound"
@@ -39,13 +39,23 @@
           🔊
         </button>
 
-        <!-- Vídeo Tutorial -->
+        <!-- Histórico de Ações (Log) -->
         <button
-          id="btn-open-tutorial-video"
-          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 font-title text-xs font-bold shadow-sm transition transform active:scale-95"
-          title="Assistir Vídeo Tutorial"
+          id="btn-open-game-log"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-title text-xs font-bold shadow-sm transition transform active:scale-95"
+          title="Histórico de Jogadas"
         >
-          <span>🎬</span>
+          <span>📜</span>
+          <span class="hidden sm:inline">Log</span>
+        </button>
+
+        <!-- Tutorial Interativo (Passo a Passo) -->
+        <button
+          id="btn-open-tutorial-step"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 font-title text-xs font-bold shadow-sm transition transform active:scale-95"
+          title="Tutorial Como Jogar"
+        >
+          <span>🎓</span>
           <span class="hidden sm:inline">Tutorial</span>
         </button>
 
@@ -56,7 +66,7 @@
           title="Regras do Jogo"
         >
           <span>📖</span>
-          <span>Regras</span>
+          <span class="hidden sm:inline">Regras</span>
         </button>
 
         <!-- Botão Config Supabase (Opcional) -->
@@ -71,7 +81,7 @@
     </header>
 
     <!-- CONTAINER PRINCIPAL DINÂMICO -->
-    <main class="flex-1 w-full max-w-5xl mx-auto flex flex-col overflow-hidden relative">
+    <main class="flex-1 w-full max-w-5xl mx-auto flex flex-col relative">
 
       <!-- ============================================== -->
       <!-- TELA 1: ENTRADA NA TAVERNA (SOLO / LOBBY)     -->
@@ -85,7 +95,7 @@
               🐉
             </div>
             <h2 class="font-title text-xl sm:text-2xl font-black text-amber-300 tracking-wide drop-shadow">
-              A Taverna dos Heróis
+              Crônicas da Aliança Arcana
             </h2>
             <p class="text-xs text-slate-300 max-w-xs mx-auto">
               Monte sua Party de 6 Classes ou abata 3 Monstros Lendários. Blefe à vontade, mas cuidado com quem gritar "MENTIRA!"
@@ -126,18 +136,18 @@
             <div class="pt-2 space-y-2">
               <button
                 id="btn-play-solo-instant"
-                class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-sm font-black shadow-attackable-glow tracking-wider uppercase transition transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                class="w-full min-h-[48px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-sm font-black shadow-attackable-glow tracking-wider uppercase transition transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
               >
                 <span>⚔️</span>
                 <span>JOGAR AGORA (Solo vs Bots)</span>
               </button>
 
               <button
-                id="btn-play-tutorial-video"
-                class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-800/80 via-pink-700/80 to-purple-900/80 hover:from-purple-700 hover:to-pink-600 text-pink-200 font-title text-xs font-bold shadow-md tracking-wider uppercase transition transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 border border-pink-500/30"
+                id="btn-play-tutorial-step"
+                class="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-800/80 via-pink-700/80 to-purple-900/80 hover:from-purple-700 hover:to-pink-600 text-pink-200 font-title text-xs font-bold shadow-md tracking-wider uppercase transition transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 border border-pink-500/30"
               >
-                <span>🎬</span>
-                <span>Assistir Vídeo Tutorial & Simulação</span>
+                <span>🎓</span>
+                <span>Tutorial Interativo: Como Jogar</span>
               </button>
             </div>
           </div>
@@ -183,30 +193,33 @@
       <!-- ============================================== -->
       <!-- TELA 2: MESA DE JOGO (5 ZONAS MOBILE-FIRST)    -->
       <!-- ============================================== -->
-      <section id="screen-mesa" class="hidden flex-1 w-full h-full flex flex-col justify-between overflow-hidden relative">
+      <section id="screen-mesa" class="hidden flex-1 w-full min-h-[calc(100dvh-52px)] flex flex-col justify-between relative">
         
-        <!-- ZONA 1: BARRA DE RIVAIS (12% da Altura) -->
-        <div id="zone-rivals-bar" class="w-full flex-shrink-0 h-[12%] min-h-[50px] max-h-[64px] border-b border-slate-800/80 bg-slate-950/60 flex items-center px-1">
-          <!-- Renderizado via renderMesa.js -->
+        <!-- ÁREA CENTRAL COM SCROLL SUAVE PARA TELAS COMPACTAS -->
+        <div class="flex-1 flex flex-col space-y-1.5 overflow-y-auto no-scrollbar pb-2">
+          <!-- ZONA 1: BARRA DE RIVAIS -->
+          <div id="zone-rivals-bar" class="w-full flex-shrink-0 min-h-[50px] border-b border-slate-800/80 bg-slate-950/60 flex items-center px-1">
+            <!-- Renderizado via renderMesa.js -->
+          </div>
+
+          <!-- ZONA 2: O COVIL DOS MONSTROS -->
+          <div id="zone-covil" class="w-full flex-shrink-0 min-h-[140px] px-2 py-1 flex flex-col justify-center">
+            <!-- Renderizado via renderMesa.js -->
+          </div>
+
+          <!-- ZONA 3: ARENA DE DADOS 2D6 & LOGS -->
+          <div id="zone-dice-arena" class="w-full flex-shrink-0 min-h-[70px] flex items-center justify-center">
+            <!-- Renderizado via renderMesa.js -->
+          </div>
+
+          <!-- ZONA 4: SUA PARTY NA MESA -->
+          <div id="zone-player-party" class="w-full flex-shrink-0 min-h-[130px] px-2 flex flex-col justify-center">
+            <!-- Renderizado via renderMesa.js -->
+          </div>
         </div>
 
-        <!-- ZONA 2: O COVIL DOS MONSTROS (33% da Altura) -->
-        <div id="zone-covil" class="w-full flex-shrink-0 h-[33%] min-h-[140px] px-2 py-1 flex flex-col justify-center">
-          <!-- Renderizado via renderMesa.js -->
-        </div>
-
-        <!-- ZONA 3: ARENA DE DADOS 2D6 & LOGS (15% da Altura) -->
-        <div id="zone-dice-arena" class="w-full flex-shrink-0 h-[15%] min-h-[70px] flex items-center justify-center">
-          <!-- Renderizado via renderMesa.js -->
-        </div>
-
-        <!-- ZONA 4: SUA PARTY NA MESA (20% da Altura) -->
-        <div id="zone-player-party" class="w-full flex-shrink-0 h-[20%] min-h-[130px] px-2 flex flex-col justify-center">
-          <!-- Renderizado via renderMesa.js -->
-        </div>
-
-        <!-- ZONA 5: BASE FIXA (MÃO & CONTROLES DO POLEGAR - 20% da Altura) -->
-        <div id="zone-thumb-controls" class="w-full flex-shrink-0 h-[20%] min-h-[140px] flex flex-col justify-between">
+        <!-- ZONA 5: BASE FIXA E ANCORADA (MÃO & CONTROLES DO POLEGAR) -->
+        <div id="zone-thumb-controls" class="w-full flex-shrink-0">
           <!-- Renderizado via renderMesa.js -->
         </div>
 
@@ -221,9 +234,9 @@
     <!-- ============================================== -->
     <!-- MODAL 1: AÇÃO DA CARTA DA MÃO (BOTTOM SHEET)   -->
     <!-- ============================================== -->
-    <div id="modal-card-action" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div class="w-full max-w-sm tavern-panel rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-4 drawer-slide-up">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+    <div id="modal-card-action" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-4">
+      <div class="w-[94vw] max-w-sm max-h-[85dvh] flex flex-col tavern-panel rounded-3xl p-4 sm:p-5 space-y-3.5 drawer-slide-up overflow-hidden shadow-2xl border-2 border-amber-400">
+        <div class="flex-shrink-0 flex items-center justify-between border-b border-slate-800 pb-2.5">
           <div class="flex items-center gap-2">
             <span id="card-action-icon" class="text-2xl">⚔️</span>
             <div>
@@ -233,15 +246,15 @@
               <span id="card-action-subtitle" class="text-[10px] text-slate-400">Tipo de Carta</span>
             </div>
           </div>
-          <button id="btn-close-card-action" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
+          <button id="btn-close-card-action" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">✕</button>
         </div>
 
-        <div id="card-action-description" class="text-xs text-slate-300 bg-black/40 p-3 rounded-xl border border-slate-800/80 leading-relaxed">
+        <div id="card-action-description" class="flex-1 overflow-y-auto text-xs text-slate-200 bg-black/50 p-3 rounded-2xl border border-slate-800/80 leading-relaxed">
           Descrição detalhada dos efeitos e rolagens da carta.
         </div>
 
-        <!-- Botões Dinâmicos de Jogada -->
-        <div id="card-action-buttons-container" class="space-y-2 pt-1">
+        <!-- Botões Dinâmicos de Jogada (Min. 48px) -->
+        <div id="card-action-buttons-container" class="flex-shrink-0 space-y-2 pt-1">
           <!-- Inserido via JS -->
         </div>
       </div>
@@ -251,18 +264,18 @@
     <!-- MODAL 2: SELETOR DE CLASSE PARA BLEFAR         -->
     <!-- ============================================== -->
     <div id="modal-bluff-selector" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
-      <div class="w-full max-w-sm tavern-panel rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-bluff-glow">
-        <div class="flex items-center justify-between border-b border-pink-500/40 pb-2">
+      <div class="w-[94vw] max-w-sm max-h-[85dvh] flex flex-col tavern-panel rounded-3xl p-4 sm:p-5 space-y-3.5 shadow-bluff-glow border-2 border-pink-500 overflow-hidden">
+        <div class="flex-shrink-0 flex items-center justify-between border-b border-pink-500/40 pb-2">
           <div class="flex items-center gap-1.5">
             <span class="text-xl">🎭</span>
             <h3 class="font-title text-xs sm:text-sm font-black text-pink-300 uppercase tracking-wider">
               Blefar Classe do Herói
             </h3>
           </div>
-          <button id="btn-close-bluff-selector" class="text-slate-400 hover:text-white text-xs">✕</button>
+          <button id="btn-close-bluff-selector" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">✕</button>
         </div>
 
-        <div id="bluff-selector-content">
+        <div id="bluff-selector-content" class="flex-1 overflow-y-auto">
           <!-- Renderizado via renderMesa.js -->
         </div>
       </div>
@@ -271,9 +284,9 @@
     <!-- ============================================== -->
     <!-- MODAL 3: DETALHES DO MONSTRO & ATAQUE (COVIL)  -->
     <!-- ============================================== -->
-    <div id="modal-monster-detail" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
-      <div class="w-full max-w-sm tavern-panel border-2 border-orange-500/60 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-monster-flame">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+    <div id="modal-monster-detail" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      <div class="w-[94vw] max-w-sm max-h-[85dvh] flex flex-col tavern-panel border-2 border-orange-500/80 rounded-3xl p-4 sm:p-5 space-y-3 shadow-monster-flame overflow-hidden">
+        <div class="flex-shrink-0 flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center gap-2">
             <span id="monster-detail-icon" class="text-3xl">🐉</span>
             <div>
@@ -283,37 +296,44 @@
               <span id="monster-detail-title" class="text-[10px] text-slate-400">Título</span>
             </div>
           </div>
-          <button id="btn-close-monster-detail" class="text-slate-400 hover:text-white text-xs">✕</button>
+          <button id="btn-close-monster-detail" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">✕</button>
         </div>
 
-        <div class="space-y-2 text-xs">
-          <div class="bg-black/40 p-2.5 rounded-xl border border-slate-800 space-y-1">
+        <div class="flex-1 overflow-y-auto space-y-2 text-xs no-scrollbar">
+          <!-- Calculadora de Sucesso da Rolagem -->
+          <div id="monster-detail-calc" class="p-2.5 rounded-2xl bg-gradient-to-r from-orange-950/80 to-amber-950/80 border border-orange-500/50 text-center font-title text-xs font-bold text-amber-300">
+            <!-- Calculado dinamicamente -->
+          </div>
+
+          <div class="bg-black/40 p-2.5 rounded-2xl border border-slate-800 space-y-1">
             <div class="text-[11px] font-semibold text-slate-300">Classes Exigidas na Party:</div>
             <div id="monster-detail-reqs" class="flex items-center gap-1.5"></div>
           </div>
 
-          <div class="bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/40 text-emerald-200">
-            <div class="font-bold text-[11px] text-emerald-400 flex items-center justify-between">
-              <span>🏆 Recompensa por Abate (Rolagem 8+):</span>
+          <div class="bg-emerald-950/30 p-2.5 rounded-2xl border border-emerald-500/40 text-emerald-200">
+            <div class="font-bold text-[11px] text-emerald-400">
+              🏆 Recompensa por Abate:
             </div>
             <p id="monster-detail-reward" class="text-[10px] mt-0.5"></p>
           </div>
 
-          <div class="bg-red-950/30 p-2.5 rounded-xl border border-red-500/40 text-red-200">
-            <div class="font-bold text-[11px] text-red-400 flex items-center justify-between">
-              <span>💀 Penalidade de Falha Crítica (5-):</span>
+          <div class="bg-red-950/30 p-2.5 rounded-2xl border border-red-500/40 text-red-200">
+            <div class="font-bold text-[11px] text-red-400">
+              💀 Penalidade de Falha Crítica:
             </div>
             <p id="monster-detail-penalty" class="text-[10px] mt-0.5"></p>
           </div>
         </div>
 
-        <button
-          id="btn-confirm-monster-attack"
-          class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider transition card-chunky shadow-attackable-glow flex items-center justify-center gap-2"
-        >
-          <span>⚔️</span>
-          <span>Atacar Monstro (2 PA)</span>
-        </button>
+        <div class="flex-shrink-0 pt-1">
+          <button
+            id="btn-confirm-monster-attack"
+            class="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider transition card-chunky shadow-attackable-glow flex items-center justify-center gap-2"
+          >
+            <span>⚔️</span>
+            <span>Atacar Monstro (2 PA)</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -361,26 +381,26 @@
     <!-- MODAL 6: REGRAS & GRIMÓRIO COMPLETO            -->
     <!-- ============================================== -->
     <div id="modal-rules" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-      <div class="w-full max-w-lg tavern-panel rounded-2xl p-4 sm:p-6 max-h-[90vh] flex flex-col space-y-4">
-        <div class="flex items-center justify-between border-b border-amber-500/30 pb-2.5">
+      <div class="w-[94vw] max-w-lg max-h-[88dvh] flex flex-col tavern-panel rounded-3xl p-4 sm:p-6 space-y-3.5 border-2 border-amber-500/50 shadow-2xl overflow-hidden">
+        <div class="flex-shrink-0 flex items-center justify-between border-b border-amber-500/30 pb-2.5">
           <div class="flex items-center gap-2">
             <span class="text-2xl">📖</span>
             <h3 class="font-title text-base sm:text-lg font-bold text-amber-300">
-              Regras: Heroes Love to Lie
+              Crônicas da Aliança Arcana • Grimório de Regras
             </h3>
           </div>
-          <button id="btn-close-rules" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
+          <button id="btn-close-rules" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">✕</button>
         </div>
 
         <div class="flex-1 overflow-y-auto no-scrollbar pr-1 text-xs space-y-3 text-slate-300 leading-relaxed">
-          <div class="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/40 space-y-1">
-            <div class="font-bold text-amber-400 text-[11px] uppercase">🏆 Como Vencer a Partida:</div>
+          <div class="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 space-y-1">
+            <div class="font-bold text-amber-400 text-[11px] uppercase tracking-wider">🏆 Como Vencer a Partida:</div>
             <p>1. <strong>Caçador Supremo:</strong> Abata <strong>3 Monstros</strong> do Covil; OU</p>
             <p>2. <strong>Aliança Completa:</strong> Reúna <strong>6 Classes Diferentes</strong> de Heróis na sua Party (contando seu Líder).</p>
           </div>
 
-          <div class="space-y-1">
-            <div class="font-bold text-cyan-300 text-[11px] uppercase">💎 Sistema de 3 Pontos de Ação (PA):</div>
+          <div class="space-y-1 bg-black/40 p-3 rounded-2xl border border-slate-800">
+            <div class="font-bold text-cyan-300 text-[11px] uppercase tracking-wider">💎 Sistema de 3 Pontos de Ação (PA):</div>
             <p>• <strong>1 PA — Comprar:</strong> Puxa 1 carta do baralho.</p>
             <p>• <strong>1 PA — Invocar Herói (Honesto):</strong> Baixa a carta face aberta e rola 2d6 gratuitamente para tentar ativar a habilidade dela!</p>
             <p>• <strong>1 PA — Invocar em Modo Blefe:</strong> Baixa a carta face oculta e declara ser qualquer uma das 6 Classes!</p>
@@ -389,16 +409,16 @@
             <p>• <strong>3 PA — Renovar:</strong> Descarta toda a mão e compra 5 novas cartas.</p>
           </div>
 
-          <div class="space-y-1">
-            <div class="font-bold text-pink-300 text-[11px] uppercase">🚨 A Regra do Blefe ("MENTIRA!"):</div>
+          <div class="space-y-1 bg-black/40 p-3 rounded-2xl border border-slate-800">
+            <div class="font-bold text-pink-300 text-[11px] uppercase tracking-wider">🚨 A Regra do Blefe ("MENTIRA!"):</div>
             <p>Sempre que alguém baixar uma carta, abre-se uma janela de 6 segundos para os outros gritarem <strong>"MENTIRA!"</strong>:</p>
             <p>• Se a carta era blefe: a carta é <strong>destruída</strong> e o mentiroso perde 1 PA.</p>
             <p>• Se era verdade: a carta é revelada na Party e o acusador imprudente deve <strong>descartar 2 cartas</strong>.</p>
           </div>
         </div>
 
-        <div class="border-t border-slate-800 pt-2 text-right">
-          <button id="btn-close-rules-bottom" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-title text-xs font-bold uppercase tracking-wider">
+        <div class="flex-shrink-0 border-t border-slate-800 pt-2 text-right">
+          <button id="btn-close-rules-bottom" class="min-h-[44px] px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-title text-xs font-bold uppercase tracking-wider">
             Entendido, Vamos Jogar!
           </button>
         </div>
@@ -406,84 +426,70 @@
     </div>
 
     <!-- ============================================== -->
-    <!-- MODAL: VÍDEO TUTORIAL & SIMULAÇÃO GUIADA       -->
+    <!-- MODAL 7: TUTORIAL INTERATIVO EM 6 ETAPAS       -->
     <!-- ============================================== -->
-    <div id="modal-tutorial-video" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-      <div class="w-full max-w-3xl tavern-panel border-2 border-pink-500/50 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh]">
-        <!-- Topo do Modal -->
-        <div class="px-4 py-3 bg-slate-950/90 border-b border-pink-500/30 flex items-center justify-between">
+    <div id="modal-interactive-tutorial" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div class="w-[94vw] max-w-md max-h-[88dvh] flex flex-col tavern-panel border-2 border-amber-500/70 rounded-3xl overflow-hidden shadow-2xl bg-[#140F1D]">
+        
+        <!-- Cabeçalho do Tutorial com Progresso -->
+        <div class="flex-shrink-0 px-4 py-3 bg-slate-950/90 border-b border-amber-500/30 flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xl">🎬</span>
-            <div>
-              <h2 class="font-title text-sm sm:text-base font-black text-pink-300">VÍDEO TUTORIAL & SIMULAÇÃO GUIADA</h2>
-              <p class="text-[10px] text-slate-400">Aprenda as regras completas em uma partida simulada passo a passo</p>
-            </div>
+            <span class="text-xl">🎓</span>
+            <h3 id="tut-header-title" class="font-title text-xs sm:text-sm font-black text-amber-300">
+              Como Jogar • Passo 1 de 6
+            </h3>
           </div>
-          <button id="btn-close-tutorial-video" class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 text-sm">
-            ✕
+          <button id="btn-close-tutorial-step" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">✕</button>
+        </div>
+
+        <div class="w-full h-1.5 bg-slate-800">
+          <div id="tut-top-progress" class="h-full bg-gradient-to-r from-pink-500 to-amber-400 transition-all duration-300" style="width: 16.6%;"></div>
+        </div>
+
+        <!-- Corpo do Passo do Tutorial -->
+        <div id="tut-step-body" class="flex-1 overflow-y-auto p-4 space-y-3 text-center no-scrollbar">
+          <!-- Inserido dinamicamente via JS -->
+        </div>
+
+        <!-- Rodapé com Botões de Navegação -->
+        <div class="flex-shrink-0 px-4 py-3 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between gap-2">
+          <button id="btn-tut-prev" class="min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold transition">
+            ← Anterior
+          </button>
+
+          <div id="tut-dots" class="flex items-center gap-1.5">
+            <span class="tut-dot w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            <span class="tut-dot w-2 h-2 rounded-full bg-slate-700"></span>
+            <span class="tut-dot w-2 h-2 rounded-full bg-slate-700"></span>
+            <span class="tut-dot w-2 h-2 rounded-full bg-slate-700"></span>
+            <span class="tut-dot w-2 h-2 rounded-full bg-slate-700"></span>
+            <span class="tut-dot w-2 h-2 rounded-full bg-slate-700"></span>
+          </div>
+
+          <button id="btn-tut-next" class="min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-slate-950 font-title text-xs font-black uppercase tracking-wider shadow-lg transition transform active:scale-95">
+            Próximo →
           </button>
         </div>
+      </div>
+    </div>
 
-        <!-- Palco do Vídeo -->
-        <div class="relative w-full aspect-[16/9] max-h-[360px] sm:max-h-[440px] bg-gradient-to-b from-[#1A1423] via-[#241830] to-[#140E1B] flex flex-col justify-between p-3 sm:p-4 overflow-hidden border-b border-slate-800">
-          <div class="flex items-center justify-between z-10">
-            <span id="tut-scene-badge" class="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-title font-bold uppercase">
-              Cena 1/6 • Objetivo
-            </span>
-            <span id="tut-timestamp" class="text-[11px] font-mono font-bold text-slate-300 bg-black/60 px-2 py-0.5 rounded-lg border border-slate-700">
-              00:00 / 02:15
-            </span>
+    <!-- ============================================== -->
+    <!-- MODAL 8: HISTÓRICO DE AÇÕES (LOG)              -->
+    <!-- ============================================== -->
+    <div id="modal-game-log" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div class="w-[94vw] max-w-md max-h-[85dvh] flex flex-col tavern-panel border-2 border-cyan-500/60 rounded-3xl overflow-hidden shadow-2xl bg-[#140F1D]">
+        <div class="flex-shrink-0 px-4 py-3 bg-slate-950/90 border-b border-cyan-500/30 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📜</span>
+            <h3 class="font-title text-sm font-black text-cyan-300 uppercase tracking-wider">
+              Histórico de Jogadas
+            </h3>
           </div>
-
-          <!-- Palco da Animação -->
-          <div id="tut-stage-viewport" class="relative flex-1 flex flex-col items-center justify-center p-2 z-10 transition-all duration-300">
-          </div>
-
-          <!-- Legenda do Mestre -->
-          <div class="z-20 bg-black/90 backdrop-blur-md border border-amber-500/30 rounded-xl p-2.5 shadow-xl flex items-start gap-2.5">
-            <span class="text-2xl flex-shrink-0">🧙‍♂️</span>
-            <div class="flex-1 min-w-0">
-              <span class="font-title text-[10px] font-bold text-amber-300 block">MESTRE DA TAVERNA:</span>
-              <p id="tut-subtitle" class="text-xs text-slate-100 leading-snug mt-0.5"></p>
-            </div>
-          </div>
+          <button id="btn-close-game-log" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">✕</button>
         </div>
 
-        <!-- Controles do Vídeo Player -->
-        <div class="p-3 bg-slate-950 space-y-2">
-          <!-- Linha do Tempo -->
-          <div class="h-2 bg-slate-800 rounded-full overflow-hidden cursor-pointer" id="tut-progress-container">
-            <div id="tut-progress-fill" class="h-full bg-gradient-to-r from-pink-500 to-amber-400 w-0 transition-all duration-150"></div>
-          </div>
-
-          <!-- Botoeira -->
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-1.5">
-              <button id="tut-btn-prev" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Cena Anterior">⏮️</button>
-              <button id="tut-btn-play" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 text-slate-950 font-title font-black text-xs flex items-center gap-1 active:scale-95">
-                <span id="tut-play-icon">⏸️</span>
-                <span id="tut-play-label">Pausar</span>
-              </button>
-              <button id="tut-btn-next" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Próxima Cena">⏭️</button>
-            </div>
-
-            <!-- Seletor de Cenas -->
-            <div class="flex items-center gap-1 overflow-x-auto no-scrollbar text-[9px] font-bold">
-              <button class="tut-tab px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30" data-tut-scene="0">1. Objetivo</button>
-              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="1">2. Os 3 PA</button>
-              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="2">3. Dados 2d6</button>
-              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="3">4. O Blefe</button>
-              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="4">5. MENTIRA!</button>
-              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="5">6. Vitória</button>
-            </div>
-
-            <!-- Som / Voz -->
-            <div class="flex items-center gap-1">
-              <button id="tut-btn-voice" class="px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 text-amber-300 text-[10px] font-bold">
-                🎙️ Voz: Ligada
-              </button>
-            </div>
-          </div>
+        <div id="game-log-list" class="flex-1 overflow-y-auto p-3 space-y-2 text-xs no-scrollbar">
+          <!-- Inserido dinamicamente via JS -->
         </div>
       </div>
     </div>
@@ -499,7 +505,7 @@
 
         <div class="space-y-1">
           <span class="text-[10px] font-title font-bold text-amber-400 uppercase tracking-widest">
-            Fim da Batalha na Taverna
+            Crônicas da Aliança Arcana
           </span>
           <h2 id="victory-title" class="font-title text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-300">
             Vitória Lendária!

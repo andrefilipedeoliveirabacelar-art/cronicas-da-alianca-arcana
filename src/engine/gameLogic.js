@@ -31,6 +31,12 @@ export const createSoloGame = (humanNickname, chosenLeaderId = 'leader_fighter',
   const players = [];
 
   // Jogador Humano
+  const humanStartingHandSize = humanLeader.id === 'leader_bard' ? 6 : 5;
+  const humanHand = [];
+  for (let c = 0; c < humanStartingHandSize; c++) {
+    if (mainDeck.length > 0) humanHand.push(mainDeck.pop());
+  }
+
   players.push({
     id: 'player_human',
     nickname: humanNickname || 'Você',
@@ -39,13 +45,19 @@ export const createSoloGame = (humanNickname, chosenLeaderId = 'leader_fighter',
     leader: humanLeader,
     party: [], // Heróis na mesa
     slainMonsters: [], // Troféus de monstros
-    hand: [mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop()],
+    hand: humanHand,
   });
 
   // Bots Oponentes
   const botNames = ['🤖 Valquíria de Sangue', '🤖 Mago Alquimista', '🤖 Ladino das Sombras'];
   for (let i = 0; i < botCount; i++) {
     const leader = availableLeaders[i] || PARTY_LEADERS[i + 1];
+    const botHandSize = leader.id === 'leader_bard' ? 6 : 5;
+    const botHand = [];
+    for (let c = 0; c < botHandSize; c++) {
+      if (mainDeck.length > 0) botHand.push(mainDeck.pop());
+    }
+
     players.push({
       id: `bot_${i + 1}`,
       nickname: botNames[i] || `🤖 Bot Arcano ${i + 1}`,
@@ -54,7 +66,7 @@ export const createSoloGame = (humanNickname, chosenLeaderId = 'leader_fighter',
       leader: leader,
       party: [],
       slainMonsters: [],
-      hand: [mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop()],
+      hand: botHand,
     });
   }
 
@@ -247,7 +259,11 @@ export const executeHeroAbilityRoll = (state, player, heroEntry, isFreeSummonRol
   soundManager.playDiceRoll();
 
   let bonus = 0;
+  // Bardo (+1 em habilidades)
   if (player.leader && player.leader.id === 'leader_bard') bonus += 1;
+  // Mago (+1 permanente ao rolar dados para ativar Habilidades de Heróis ou Magias)
+  if (player.leader && player.leader.id === 'leader_wizard') bonus += 1;
+  // Item equipado
   if (heroEntry.equippedItem) bonus += heroEntry.equippedItem.bonus || 1;
 
   const total = roll.total + bonus;
@@ -354,6 +370,41 @@ export const actActivateHeroAbility = (state, playerId, heroInstanceId) => {
   return true;
 };
 
+// Calcula a chance real de sucesso contra um Monstro com todos os bônus ativos
+export const calculateMonsterAttackChance = (player, monster) => {
+  if (!player || !monster) return { bonus: 0, target: 8, neededOnDice: 8, pct: 42 };
+
+  let bonus = 0;
+  // Bônus do Líder Guerreiro: +1 permanente em ataques a monstros
+  if (player.leader?.id === 'leader_fighter') bonus += 1;
+
+  // Bônus do Dragão Esqueleto abatido: +2 permanente em ataques
+  if (player.slainMonsters?.some((m) => m.id === 'monster_2')) bonus += 2;
+
+  // Bônus da Hidra de Cristal abatida: +1 em ataques
+  if (player.slainMonsters?.some((m) => m.id === 'monster_1')) bonus += 1;
+
+  // Itens equipados na party
+  if (player.party) {
+    player.party.forEach((h) => {
+      if (h.equippedItem?.bonus) bonus += h.equippedItem.bonus;
+    });
+  }
+
+  const target = monster.rollTarget || 8;
+  const neededOnDice = Math.max(2, target - bonus);
+
+  let successWays = 0;
+  for (let d1 = 1; d1 <= 6; d1++) {
+    for (let d2 = 1; d2 <= 6; d2++) {
+      if (d1 + d2 >= neededOnDice) successWays++;
+    }
+  }
+
+  const pct = Math.min(100, Math.round((successWays / 36) * 100));
+  return { bonus, target, neededOnDice, pct };
+};
+
 // AÇÃO: Atacar Monstro (2 PA)
 export const actAttackMonster = (state, playerId, monsterId) => {
   const player = state.players.find((p) => p.id === playerId);
@@ -374,10 +425,8 @@ export const actAttackMonster = (state, playerId, monsterId) => {
   const roll = roll2d6();
   soundManager.playDiceRoll();
 
-  let bonus = 0;
-  // Bônus da Valquíria (+1 em ataques)
-  if (player.leader && player.leader.id === 'leader_fighter') bonus += 1;
-
+  const attackCalc = calculateMonsterAttackChance(player, monster);
+  const bonus = attackCalc.bonus;
   const total = roll.total + bonus;
   state.diceState = {
     die1: roll.die1,
@@ -398,6 +447,15 @@ export const actAttackMonster = (state, playerId, monsterId) => {
     soundManager.playMonsterSlay();
     state.activeMonsters = state.activeMonsters.filter((m) => m.id !== monster.id);
     player.slainMonsters.push(monster);
+
+    // Passiva do Patrulheiro: Ao abater um Monstro, ganha +1 PA imediato no mesmo turno!
+    if (player.leader?.id === 'leader_ranger') {
+      state.currentPA += 1;
+      state.logs.unshift({
+        text: `🏹 Rastreadora Silvestre concedeu +1 PA imediato pelo abate de [${monster.name}]!`,
+        type: 'action',
+      });
+    }
 
     // Repõe Monstro no Covil se houver no baralho
     if (state.monsterDeck.length > 0) {
@@ -441,10 +499,20 @@ export const actAttackMonster = (state, playerId, monsterId) => {
 
 // Aplica penalidade de falha do monstro
 const applyMonsterFailurePenalty = (state, player, monster) => {
-  // Golem de Obsidiana concede imunidade a sacrifícios forçados
+  // Guardião Baluarte de Ferro: Suas cartas na Party não podem ser destruídas por penalidades de Monstros (apenas descartar cartas)
+  const isGuardianLeader = player.leader?.id === 'leader_guardian';
   const hasObsidianGolem = player.slainMonsters.some((m) => m.id === 'monster_3');
 
-  if (monster.penaltyDescription.includes('Sacrifique') && !hasObsidianGolem) {
+  if (monster.penaltyDescription.includes('Sacrifique')) {
+    if (isGuardianLeader || hasObsidianGolem) {
+      state.logs.unshift({
+        text: `🛡️ ${isGuardianLeader ? 'Baluarte de Ferro' : 'Golem de Obsidiana'} protegeu a Party de ${player.nickname} contra o sacrifício! Em vez disso, descartou 1 carta da mão.`,
+        type: 'action',
+      });
+      if (player.hand.length > 0) player.hand.pop();
+      return;
+    }
+
     if (player.party.length > 0) {
       const sacrificed = player.party.pop();
       state.discardPile.push(sacrificed.card);
@@ -672,9 +740,16 @@ export const actPassTurn = (state) => {
   state.maxPA = hasTitan ? 4 : 3;
   state.currentPA = state.maxPA;
 
-  // Passiva da Quimera Arcana: compra 1 carta no início do turno
-  if (nextPlayer.slainMonsters.some((m) => m.id === 'monster_4') && state.mainDeck.length > 0) {
+  // Passiva da Quimera Arcana ou Hidra de Cristal: compra 1 carta no início do turno
+  const extraDrawMonsters = nextPlayer.slainMonsters.filter(
+    (m) => m.id === 'monster_4' || m.id === 'monster_1'
+  );
+  if (extraDrawMonsters.length > 0 && state.mainDeck.length > 0) {
     nextPlayer.hand.push(state.mainDeck.pop());
+    state.logs.unshift({
+      text: `✨ Troféus de Monstro concederam +1 carta inicial para ${nextPlayer.nickname}!`,
+      type: 'action',
+    });
   }
 
   // Reseta usos de habilidade da Party

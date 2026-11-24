@@ -12,6 +12,7 @@ import {
   actActivateHeroAbility,
   actPassTurn,
   actDiscardAndDraw5,
+  calculateMonsterAttackChance,
 } from './engine/gameLogic.js';
 import { botAI } from './engine/botAI.js';
 import { soundManager } from './lib/soundFX.js';
@@ -43,8 +44,9 @@ const DOM = {
 
   // Header
   btnToggleSound: document.getElementById('btn-toggle-sound'),
+  btnOpenGameLog: document.getElementById('btn-open-game-log'),
+  btnOpenTutorialStep: document.getElementById('btn-open-tutorial-step'),
   btnOpenRules: document.getElementById('btn-open-rules'),
-  btnOpenTutorialVideo: document.getElementById('btn-open-tutorial-video'),
   btnOpenDbConfig: document.getElementById('btn-open-db-config'),
 
   // Lobby
@@ -52,7 +54,7 @@ const DOM = {
   leaderSelector: document.getElementById('leader-selector'),
   selectedLeaderPreview: document.getElementById('selected-leader-preview'),
   btnPlaySoloInstant: document.getElementById('btn-play-solo-instant'),
-  btnPlayTutorialVideo: document.getElementById('btn-play-tutorial-video'),
+  btnPlayTutorialStep: document.getElementById('btn-play-tutorial-step'),
   btnToggleMultiplayer: document.getElementById('btn-toggle-multiplayer'),
   multiplayerDrawer: document.getElementById('multiplayer-drawer'),
   btnCreateRoom: document.getElementById('btn-create-room'),
@@ -84,6 +86,7 @@ const DOM = {
   monsterDetailIcon: document.getElementById('monster-detail-icon'),
   monsterDetailName: document.getElementById('monster-detail-name'),
   monsterDetailTitle: document.getElementById('monster-detail-title'),
+  monsterDetailCalc: document.getElementById('monster-detail-calc'),
   monsterDetailReqs: document.getElementById('monster-detail-reqs'),
   monsterDetailReward: document.getElementById('monster-detail-reward'),
   monsterDetailPenalty: document.getElementById('monster-detail-penalty'),
@@ -104,20 +107,20 @@ const DOM = {
   btnCloseRules: document.getElementById('btn-close-rules'),
   btnCloseRulesBottom: document.getElementById('btn-close-rules-bottom'),
 
-  modalTutorialVideo: document.getElementById('modal-tutorial-video'),
-  btnCloseTutorialVideo: document.getElementById('btn-close-tutorial-video'),
-  tutSceneBadge: document.getElementById('tut-scene-badge'),
-  tutTimestamp: document.getElementById('tut-timestamp'),
-  tutStageViewport: document.getElementById('tut-stage-viewport'),
-  tutSubtitle: document.getElementById('tut-subtitle'),
-  tutProgressFill: document.getElementById('tut-progress-fill'),
-  tutProgressContainer: document.getElementById('tut-progress-container'),
-  tutBtnPrev: document.getElementById('tut-btn-prev'),
-  tutBtnPlay: document.getElementById('tut-btn-play'),
-  tutPlayIcon: document.getElementById('tut-play-icon'),
-  tutPlayLabel: document.getElementById('tut-play-label'),
-  tutBtnNext: document.getElementById('tut-btn-next'),
-  tutBtnVoice: document.getElementById('tut-btn-voice'),
+  // Modal Tutorial Interativo (6 Passos)
+  modalInteractiveTutorial: document.getElementById('modal-interactive-tutorial'),
+  btnCloseTutorialStep: document.getElementById('btn-close-tutorial-step'),
+  tutHeaderTitle: document.getElementById('tut-header-title'),
+  tutTopProgress: document.getElementById('tut-top-progress'),
+  tutStepBody: document.getElementById('tut-step-body'),
+  btnTutPrev: document.getElementById('btn-tut-prev'),
+  btnTutNext: document.getElementById('btn-tut-next'),
+  tutDots: document.getElementById('tut-dots'),
+
+  // Modal Histórico de Ações (Log)
+  modalGameLog: document.getElementById('modal-game-log'),
+  btnCloseGameLog: document.getElementById('btn-close-game-log'),
+  gameLogList: document.getElementById('game-log-list'),
 
   modalVictory: document.getElementById('modal-victory'),
   victoryTitle: document.getElementById('victory-title'),
@@ -343,6 +346,19 @@ const attachReactionEvents = (humanPlayer) => {
   const btnPassReaction = document.getElementById('btn-pass-reaction');
   if (btnPassReaction) {
     btnPassReaction.onclick = () => {
+      const rx = gameState.pendingReaction;
+      if (rx && rx.isBluff) {
+        const initiator = gameState.players.find((p) => p.id === rx.initiatorId);
+        if (initiator && initiator.leader?.id === 'leader_thief') {
+          if (gameState.mainDeck.length > 0) {
+            initiator.hand.push(gameState.mainDeck.pop());
+            gameState.logs.unshift({
+              text: `🤫 Sombra de Velka: Ninguém desconfiou do blefe de ${initiator.nickname}! Comprou 1 carta grátis.`,
+              type: 'bluff',
+            });
+          }
+        }
+      }
       gameState.pendingReaction = null;
       renderGameMesa();
     };
@@ -370,7 +386,21 @@ const startReactionTimer = () => {
     gameState.pendingReaction.timeRemaining -= 1;
 
     if (gameState.pendingReaction.timeRemaining <= 0) {
+      const rx = gameState.pendingReaction;
       stopReactionTimer();
+      // Passiva do Líder Ladino (Sombra de Velka): compra 1 carta se ninguém gritar MENTIRA
+      if (rx && rx.isBluff) {
+        const initiator = gameState.players.find((p) => p.id === rx.initiatorId);
+        if (initiator && initiator.leader?.id === 'leader_thief') {
+          if (gameState.mainDeck.length > 0) {
+            initiator.hand.push(gameState.mainDeck.pop());
+            gameState.logs.unshift({
+              text: `🤫 Sombra de Velka: Ninguém desconfiou do blefe de ${initiator.nickname}! Comprou 1 carta grátis.`,
+              type: 'bluff',
+            });
+          }
+        }
+      }
       gameState.pendingReaction = null;
       renderGameMesa();
     } else {
@@ -429,24 +459,28 @@ const openCardActionModal = (player, handIndex, isMyTurn) => {
   if (isMyTurn && gameState.currentPA >= 1) {
     if (card.type === 'hero') {
       buttonsHTML = `
-        <button id="btn-modal-summon-honest" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-title text-xs font-black uppercase tracking-wider card-chunky">
-          ✨ Invocar Honesto (1 PA)
+        <button id="btn-modal-summon-honest" class="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider card-chunky shadow-lg flex items-center justify-center gap-2">
+          <span>✨</span>
+          <span>Invocar Honesto (1 PA)</span>
         </button>
-        <button id="btn-modal-summon-bluff" class="w-full py-3 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-title text-xs font-black uppercase tracking-wider card-chunky shadow-bluff-glow">
-          🎭 Blefar Classe (1 PA)
+        <button id="btn-modal-summon-bluff" class="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-title text-xs sm:text-sm font-black uppercase tracking-wider card-chunky shadow-bluff-glow flex items-center justify-center gap-2">
+          <span>🎭</span>
+          <span>Blefar Classe (1 PA)</span>
         </button>
       `;
     } else if (card.type === 'spell') {
       buttonsHTML = `
-        <button id="btn-modal-play-spell" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-title text-xs font-black uppercase tracking-wider card-chunky">
-          ⚡ Lançar Magia (1 PA)
+        <button id="btn-modal-play-spell" class="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider card-chunky shadow-lg flex items-center justify-center gap-2">
+          <span>⚡</span>
+          <span>Usar Carta de Magia (1 PA)</span>
         </button>
       `;
     } else if (card.type === 'item') {
       if (player.party.length > 0) {
         buttonsHTML = `
-          <button id="btn-modal-equip-item" class="w-full py-3 rounded-xl bg-gradient-to-r from-slate-400 to-slate-600 text-slate-950 font-title text-xs font-black uppercase tracking-wider card-chunky">
-            🛡️ Equipar em Herói (1 PA)
+          <button id="btn-modal-equip-item" class="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-slate-400 to-slate-600 hover:from-slate-300 hover:to-slate-500 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider card-chunky shadow-lg flex items-center justify-center gap-2">
+            <span>🛡️</span>
+            <span>Equipar Item em Herói (1 PA)</span>
           </button>
         `;
       } else {
@@ -462,6 +496,12 @@ const openCardActionModal = (player, handIndex, isMyTurn) => {
   } else {
     buttonsHTML = `<div class="text-xs text-slate-500 text-center italic py-2">${!isMyTurn ? 'Aguarde seu turno para jogar cartas.' : 'Pontos de Ação (PA) insuficientes.'}</div>`;
   }
+
+  buttonsHTML += `
+    <button id="btn-modal-close-sheet" class="w-full min-h-[44px] py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold uppercase tracking-wider transition">
+      Fechar
+    </button>
+  `;
 
   DOM.cardActionButtonsContainer.innerHTML = buttonsHTML;
 
@@ -505,6 +545,13 @@ const openCardActionModal = (player, handIndex, isMyTurn) => {
     };
   }
 
+  const btnCloseSheet = document.getElementById('btn-modal-close-sheet');
+  if (btnCloseSheet) {
+    btnCloseSheet.onclick = () => {
+      DOM.modalCardAction.classList.add('hidden');
+    };
+  }
+
   DOM.modalCardAction.classList.remove('hidden');
 };
 
@@ -541,6 +588,20 @@ const openMonsterDetailModal = (monster, player) => {
   DOM.monsterDetailIcon.textContent = monster.icon;
   DOM.monsterDetailName.textContent = monster.name;
   DOM.monsterDetailTitle.textContent = monster.title;
+
+  // Calculadora de Chance de Sucesso da Rolagem
+  const calc = calculateMonsterAttackChance(player, monster);
+  if (DOM.monsterDetailCalc) {
+    DOM.monsterDetailCalc.innerHTML = `
+      <div class="flex items-center justify-between text-xs">
+        <span>Bônus da Party/Líder: <strong class="text-amber-300 font-bold">+${calc.bonus}</strong></span>
+        <span>Meta no dado: <strong class="text-emerald-400 font-black">${calc.neededOnDice}+</strong></span>
+      </div>
+      <div class="text-[11px] text-slate-300 font-medium mt-1">
+        Probabilidade de Sucesso: <strong class="text-emerald-300 font-black text-xs">${calc.pct}%</strong>
+      </div>
+    `;
+  }
 
   DOM.monsterDetailReqs.innerHTML = monster.requiredClasses
     .map((c) => `
@@ -717,237 +778,295 @@ DOM.btnCloseRules.onclick = closeRules;
 DOM.btnCloseRulesBottom.onclick = closeRules;
 
 // ==========================================
-// VÍDEO TUTORIAL & SIMULAÇÃO INTERATIVA
+// TUTORIAL INTERATIVO EM 6 ETAPAS (ONBOARDING MOBILE)
 // ==========================================
-let tutSceneIndex = 0;
-let tutIsPlaying = false;
-let tutTimer = null;
-let tutProgress = 0;
-let tutVoiceEnabled = true;
+let tutCurrentStep = 0;
 
-const TUT_SCENES = [
+const TUTORIAL_STEPS = [
   {
-    title: 'Cena 1/6 • Objetivo da Partida',
-    durationMs: 8000,
-    text: 'Bem-vindo a Heroes Love to Lie! Para vencer, você tem duas opções: Abater 3 Monstros Lendários OU reunir 6 Heróis de classes diferentes na sua Party!',
-    html: `
-      <div class="flex flex-col items-center text-center space-y-3 animate-fade-in max-w-sm">
-        <div class="w-14 h-14 rounded-2xl border-2 border-amber-400 bg-gradient-to-tr from-purple-900 to-pink-900 flex items-center justify-center text-3xl shadow-lg">
-          🎭
+    step: 1,
+    title: 'Objetivo da Batalha',
+    render: () => `
+      <div class="space-y-3.5">
+        <div class="w-14 h-14 mx-auto rounded-2xl border-2 border-amber-400 bg-gradient-to-tr from-purple-900 to-pink-900 flex items-center justify-center text-3xl shadow-lg">
+          👑
         </div>
-        <h3 class="font-title text-base font-black text-amber-300">DUAS FORMAS DE VENCER</h3>
-        <div class="grid grid-cols-2 gap-2 w-full text-xs">
-          <div class="p-2.5 rounded-xl bg-slate-950 border border-orange-500/50 text-center">
-            <span class="text-2xl block">🐉</span>
-            <span class="font-title text-orange-400 font-bold block mt-1">3 Monstros</span>
-            <span class="text-[9px] text-slate-400">Caçador Supremo</span>
+        <h4 class="font-title text-base font-black text-amber-300">
+          COMO VENCER A PARTIDA
+        </h4>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="p-3 rounded-2xl bg-slate-950 border-2 border-orange-500/60 flex flex-col items-center text-center shadow-md">
+            <span class="text-3xl mb-1">🐉</span>
+            <span class="font-title text-orange-400 font-bold">ROTA 1</span>
+            <span class="font-black text-white text-[11px] mt-0.5">3 Monstros</span>
+            <span class="text-[9px] text-slate-400 mt-1">Abata 3 feras épicas no Covil</span>
           </div>
-          <div class="p-2.5 rounded-xl bg-slate-950 border border-pink-500/50 text-center">
-            <span class="text-2xl block">👑</span>
-            <span class="font-title text-pink-400 font-bold block mt-1">6 Classes</span>
-            <span class="text-[9px] text-slate-400">Aliança Completa</span>
-          </div>
-        </div>
-      </div>
-    `,
-  },
-  {
-    title: 'Cena 2/6 • Cristais de Ação (3 PA)',
-    durationMs: 8000,
-    text: 'A cada início de turno você recebe 3 Cristais de Ação (PA). Gaste 1 PA para comprar ou invocar, e 2 PA para atacar monstros!',
-    html: `
-      <div class="flex flex-col items-center text-center space-y-3 max-w-sm">
-        <h3 class="font-title text-base font-black text-amber-300">SEUS 3 PONTOS DE AÇÃO</h3>
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-xl shadow-cyan-500/50 shadow-md">💎</div>
-          <div class="w-10 h-10 rounded-xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-xl shadow-cyan-500/50 shadow-md">💎</div>
-          <div class="w-10 h-10 rounded-xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-xl shadow-cyan-500/50 shadow-md">💎</div>
-        </div>
-        <div class="grid grid-cols-3 gap-1.5 w-full text-[9px] font-bold">
-          <div class="p-1.5 rounded-lg bg-black/60 border border-slate-700"><span class="text-cyan-300 block">1 PA</span>Comprar</div>
-          <div class="p-1.5 rounded-lg bg-black/60 border border-slate-700"><span class="text-cyan-300 block">1 PA</span>Invocar</div>
-          <div class="p-1.5 rounded-lg bg-black/60 border border-amber-500/40"><span class="text-amber-400 block">2 PA</span>Atacar Monstro</div>
-        </div>
-      </div>
-    `,
-  },
-  {
-    title: 'Cena 3/6 • Invocação & Rolagem 2d6',
-    durationMs: 8500,
-    text: 'Ao invocar honestamente um herói, role 2 dados! Se tirar o valor exigido, você ativa sua habilidade especial!',
-    html: `
-      <div class="flex items-center justify-center gap-3 max-w-sm">
-        <div class="w-28 p-2 rounded-xl bg-purple-950 border-2 border-purple-400 text-center">
-          <span class="text-2xl">🧙‍♀️</span>
-          <span class="font-title text-[10px] font-bold text-purple-200 block">MAGA DO VÓRTICE</span>
-          <span class="px-1.5 py-0.2 rounded bg-purple-800 text-[8px] text-purple-200">7+</span>
-        </div>
-        <div class="flex flex-col items-center p-2 rounded-xl bg-black/60 border border-slate-700">
-          <div class="flex gap-2">
-            <div class="w-9 h-9 rounded-lg bg-amber-400 text-slate-950 font-black text-lg flex items-center justify-center">4</div>
-            <div class="w-9 h-9 rounded-lg bg-amber-400 text-slate-950 font-black text-lg flex items-center justify-center">5</div>
-          </div>
-          <span class="mt-1 text-[9px] font-bold text-emerald-400 font-title">TOTAL: 9 (Sucesso!)</span>
-        </div>
-      </div>
-    `,
-  },
-  {
-    title: 'Cena 4/6 • O Grande Blefe',
-    durationMs: 8500,
-    text: 'Não tem a classe necessária para um monstro? Você pode blefar! Jogue a carta virada para baixo e declare qualquer classe!',
-    html: `
-      <div class="flex flex-col items-center text-center space-y-2 max-w-sm">
-        <div class="w-28 h-36 rounded-xl bg-gradient-to-br from-slate-950 to-purple-950 border-2 border-pink-500 flex flex-col items-center justify-center relative shadow-xl">
-          <span class="text-3xl">🎭</span>
-          <span class="font-title text-[9px] font-bold text-pink-300 mt-1">CARTA OCULTA</span>
-          <div class="absolute -bottom-2 px-2 py-0.5 rounded bg-red-600 text-white font-title text-[8px] font-black uppercase">
-            Declarou: GUERREIRO
+          <div class="p-3 rounded-2xl bg-slate-950 border-2 border-pink-500/60 flex flex-col items-center text-center shadow-md">
+            <span class="text-3xl mb-1">⚔️</span>
+            <span class="font-title text-pink-400 font-bold">ROTA 2</span>
+            <span class="font-black text-white text-[11px] mt-0.5">6 Classes</span>
+            <span class="text-[9px] text-slate-400 mt-1">Reúna 6 heróis diferentes na Party</span>
           </div>
         </div>
-        <p class="text-[10px] text-slate-300">Você fingiu ter a classe exigida pelo Monstro!</p>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Você começa a partida com seu <strong>Líder de Grupo</strong> na mesa e <strong>5 cartas</strong> na mão!
+        </p>
       </div>
     `,
   },
   {
-    title: 'Cena 5/6 • A Contestação: MENTIRA!',
-    durationMs: 8500,
-    text: 'Os oponentes têm 6 segundos para gritar MENTIRA! Se descobrirem seu blefe, você é punido; se falarem errado, eles perdem um herói!',
-    html: `
-      <div class="flex flex-col items-center text-center space-y-2 max-w-sm">
-        <div class="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 text-white font-title text-xs font-black shadow-lg flex items-center gap-1.5 animate-pulse">
-          <span>🚨</span><span>MENTIRA! (Desafiar)</span>
+    step: 2,
+    title: 'Os 3 Pontos de Ação (PA)',
+    render: () => `
+      <div class="space-y-3.5">
+        <div class="flex items-center justify-center gap-3 py-1">
+          <div class="w-12 h-12 rounded-2xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-2xl shadow-cyan-500/50 shadow-md">💎</div>
+          <div class="w-12 h-12 rounded-2xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-2xl shadow-cyan-500/50 shadow-md">💎</div>
+          <div class="w-12 h-12 rounded-2xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-2xl shadow-cyan-500/50 shadow-md">💎</div>
         </div>
-        <div class="p-2 rounded-xl bg-black/70 border border-red-500/30 text-left text-[10px] space-y-1">
-          <p class="text-emerald-400 font-bold">✓ Se era mentira: <span class="text-slate-300 font-normal">A carta blefada é destruída!</span></p>
-          <p class="text-rose-400 font-bold">✗ Se era verdade: <span class="text-slate-300 font-normal">O desafiante perde 1 herói!</span></p>
+        <h4 class="font-title text-sm font-bold text-cyan-300">
+          SEUS 3 CRISTAIS DE AÇÃO (PA)
+        </h4>
+        <div class="grid grid-cols-3 gap-2 text-[10px] font-bold text-slate-200">
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-center">
+            <span class="text-cyan-300 block text-xs font-black">1 PA</span>
+            <span>Comprar Carta</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-center">
+            <span class="text-cyan-300 block text-xs font-black">1 PA</span>
+            <span>Invocar Herói</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-amber-500/50 text-center">
+            <span class="text-amber-400 block text-xs font-black">2 PA</span>
+            <span>Atacar Monstro</span>
+          </div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-purple-950/50 border border-purple-500/30 text-xs text-purple-200 text-left">
+          💡 <strong>Manobra Tática:</strong> Com 3 PA você pode descartar toda a sua mão e puxar 5 novas cartas do baralho!
         </div>
       </div>
     `,
   },
   {
-    title: 'Cena 6/6 • Caça a Monstros & Glória',
-    durationMs: 8500,
-    text: 'Cumpra os requisitos, gaste 2 PA e ataque o Monstro! Use cartas modificadoras (+2, +3) para garantir a vitória!',
-    html: `
-      <div class="flex flex-col items-center text-center space-y-2 max-w-sm">
-        <div class="w-36 p-2 rounded-xl bg-slate-950 border-2 border-orange-500 text-center shadow-lg">
-          <span class="text-3xl">🦖</span>
-          <span class="font-title text-[10px] font-black text-orange-400 block">REX DA FENDA</span>
-          <span class="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-title text-[9px] font-black uppercase mt-1 inline-block">
-            🏆 MONSTRO ABATIDO!
-          </span>
+    step: 3,
+    title: 'Habilidades & Dados 2d6',
+    render: () => `
+      <div class="space-y-3.5">
+        <div class="flex items-center justify-center gap-3">
+          <div class="w-28 p-2.5 rounded-2xl bg-purple-950 border-2 border-purple-400 text-center shadow-lg">
+            <span class="text-3xl block">🧙‍♀️</span>
+            <span class="font-title text-[10px] font-bold text-purple-200 block">Maga do Vórtice</span>
+            <span class="px-2 py-0.5 rounded bg-purple-800 text-[9px] text-purple-300 font-bold mt-1 inline-block">Meta: 7+</span>
+          </div>
+          <div class="flex flex-col items-center p-3 rounded-2xl bg-black/60 border border-slate-700">
+            <span class="text-[10px] text-slate-400 font-bold mb-1">ROLAGEM 2d6</span>
+            <div class="flex gap-2">
+              <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center shadow-md">4</div>
+              <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center shadow-md">5</div>
+            </div>
+            <span class="text-xs font-bold text-emerald-400 font-title mt-1.5">TOTAL: 9 (Sucesso!)</span>
+          </div>
         </div>
-        <span class="text-xs font-title font-bold text-amber-300">Troféus: 🏆 3/3 (Vitória Suprema!)</span>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Ao invocar honestamente um Herói (face aberta), você rola 2d6 gratuitamente! Se atingir a meta da carta (7+), a habilidade especial é ativada na hora!
+        </p>
+      </div>
+    `,
+  },
+  {
+    step: 4,
+    title: 'A Arte do Blefe',
+    render: () => `
+      <div class="space-y-3.5">
+        <div class="relative w-32 h-44 mx-auto rounded-2xl bg-gradient-to-br from-slate-950 to-purple-950 border-2 border-pink-500 flex flex-col items-center justify-center shadow-2xl">
+          <span class="text-4xl">🎭</span>
+          <span class="font-title text-xs font-bold text-pink-300 mt-2">CARTA OCULTA</span>
+          <div class="absolute -bottom-2.5 px-3 py-1 rounded-full bg-red-600 text-white font-title text-[9px] font-black uppercase tracking-wider shadow-md">
+            Alegou: GUERREIRO
+          </div>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Precisa de um Guerreiro para atacar o Dragão mas só tem um Bardo na mão? Baixe a carta virada para baixo em <strong>Modo Blefe</strong> e declare ser a classe que desejar!
+        </p>
+      </div>
+    `,
+  },
+  {
+    step: 5,
+    title: 'Gritar "MENTIRA!"',
+    render: () => `
+      <div class="space-y-3.5">
+        <div class="px-5 py-3 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 text-white font-title text-sm font-black shadow-xl flex items-center justify-center gap-2 max-w-xs mx-auto animate-pulse">
+          <span>🚨</span>
+          <span>GRITAR MENTIRA!</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-black/70 border border-red-500/40 text-left text-xs space-y-2">
+          <div class="text-emerald-400 font-bold">
+            ✓ Se o jogador estiver mentindo:
+            <span class="text-slate-300 block font-normal text-[11px] mt-0.5">
+              O blefe é desmascarado! A carta é destruída e o mentiroso perde 1 PA.
+            </span>
+          </div>
+          <div class="text-rose-400 font-bold border-t border-slate-800 pt-1.5">
+            ✗ Se o jogador falou a verdade:
+            <span class="text-slate-300 block font-normal text-[11px] mt-0.5">
+              O acusador é punido por falso testemunho e descarta 2 cartas da mão!
+            </span>
+          </div>
+        </div>
+      </div>
+    `,
+  },
+  {
+    step: 6,
+    title: 'Mini-Desafio Prático',
+    render: () => `
+      <div class="space-y-3.5">
+        <div class="p-3 rounded-2xl bg-slate-950 border-2 border-orange-500 max-w-xs mx-auto text-center space-y-1.5 shadow-lg">
+          <span class="text-3xl block">🐉</span>
+          <h5 class="font-title text-xs font-black text-orange-400">HIDRA DE CRISTAL</h5>
+          <span class="px-2 py-0.5 rounded bg-orange-950 text-[10px] text-orange-300 font-bold inline-block">Meta no 2d6: 8+</span>
+          <div id="tut-challenge-result" class="text-xs font-bold text-amber-300 py-1">
+            Toque abaixo para testar sua sorte no combate!
+          </div>
+        </div>
+
+        <button
+          id="btn-tut-roll-challenge"
+          class="w-full min-h-[48px] py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2"
+        >
+          <span>⚔️</span>
+          <span>Atacar Hidra (2 PA)</span>
+        </button>
       </div>
     `,
   },
 ];
 
-const loadTutScene = (index) => {
+const renderTutStep = (index) => {
   if (index < 0) index = 0;
-  if (index >= TUT_SCENES.length) index = 0;
-  tutSceneIndex = index;
-  tutProgress = 0;
-  const scene = TUT_SCENES[tutSceneIndex];
+  if (index >= TUTORIAL_STEPS.length) index = TUTORIAL_STEPS.length - 1;
+  tutCurrentStep = index;
+  const stepObj = TUTORIAL_STEPS[tutCurrentStep];
 
-  if (DOM.tutSceneBadge) DOM.tutSceneBadge.textContent = scene.title;
-  if (DOM.tutSubtitle) DOM.tutSubtitle.textContent = scene.text;
-  if (DOM.tutStageViewport) DOM.tutStageViewport.innerHTML = scene.html;
+  if (DOM.tutHeaderTitle) {
+    DOM.tutHeaderTitle.textContent = `Como Jogar • Passo ${stepObj.step} de 6: ${stepObj.title}`;
+  }
+  if (DOM.tutTopProgress) {
+    DOM.tutTopProgress.style.width = `${((tutCurrentStep + 1) / 6) * 100}%`;
+  }
+  if (DOM.tutStepBody) {
+    DOM.tutStepBody.innerHTML = stepObj.render();
+  }
 
-  // Atualiza tabs
-  document.querySelectorAll('.tut-tab').forEach((tab, i) => {
-    if (i === tutSceneIndex) {
-      tab.className = 'tut-tab px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
+  // Atualiza bolinhas
+  if (DOM.tutDots) {
+    DOM.tutDots.innerHTML = TUTORIAL_STEPS.map((_, i) => `
+      <span class="w-2.5 h-2.5 rounded-full transition ${
+        i === tutCurrentStep ? 'bg-amber-400 scale-125' : 'bg-slate-700'
+      }"></span>
+    `).join('');
+  }
+
+  // Botões
+  if (DOM.btnTutPrev) {
+    DOM.btnTutPrev.disabled = tutCurrentStep === 0;
+    DOM.btnTutPrev.className = `min-h-[44px] px-3.5 py-2 rounded-xl text-slate-300 font-title text-xs font-bold transition ${
+      tutCurrentStep === 0 ? 'opacity-30 cursor-not-allowed bg-slate-900' : 'bg-slate-800 hover:bg-slate-700'
+    }`;
+  }
+
+  if (DOM.btnTutNext) {
+    if (tutCurrentStep === TUTORIAL_STEPS.length - 1) {
+      DOM.btnTutNext.textContent = '⚔️ Começar Partida!';
     } else {
-      tab.className = 'tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400';
+      DOM.btnTutNext.textContent = 'Próximo →';
     }
-  });
+  }
 
-  // Som & Locução
-  soundManager.playCardTap();
-  if (tutVoiceEnabled && window.speechSynthesis) {
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(scene.text);
-    utt.lang = 'pt-BR';
-    utt.rate = 1.05;
-    window.speechSynthesis.speak(utt);
+  // Handler do mini-desafio no Passo 6
+  if (tutCurrentStep === 5) {
+    const btnChallenge = document.getElementById('btn-tut-roll-challenge');
+    if (btnChallenge) {
+      btnChallenge.onclick = () => {
+        soundManager.playDiceRoll();
+        const d1 = Math.floor(Math.random() * 6) + 1;
+        const d2 = Math.floor(Math.random() * 6) + 1;
+        const total = d1 + d2;
+        const resultEl = document.getElementById('tut-challenge-result');
+        if (resultEl) {
+          if (total >= 8) {
+            soundManager.playMonsterSlay();
+            resultEl.innerHTML = `🎲 Rolou [${d1}] + [${d2}] = <span class="text-emerald-400 font-black text-sm">${total}</span>! 🏆 <span class="text-emerald-300">MONSTRO ABATIDO! Você está pronto para triunfar na Taverna!</span>`;
+          } else {
+            soundManager.playCardTap();
+            resultEl.innerHTML = `🎲 Rolou [${d1}] + [${d2}] = <span class="text-rose-400 font-black text-sm">${total}</span>. Quase! Use cartas Modificadoras (+2) na partida real para garantir a vitória!`;
+          }
+        }
+      };
+    }
   }
 };
 
-const tutTick = () => {
-  if (!tutIsPlaying) return;
-  const scene = TUT_SCENES[tutSceneIndex];
-  tutProgress += 150;
+const openTutorialStepModal = () => {
+  renderTutStep(0);
+  DOM.modalInteractiveTutorial.classList.remove('hidden');
+};
 
-  const totalScenes = TUT_SCENES.length;
-  const overallPercent = ((tutSceneIndex + (tutProgress / scene.durationMs)) / totalScenes) * 100;
-  if (DOM.tutProgressFill) DOM.tutProgressFill.style.width = Math.min(100, overallPercent) + '%';
+const closeTutorialStepModal = () => {
+  DOM.modalInteractiveTutorial.classList.add('hidden');
+};
 
-  const currentSeconds = Math.floor((tutSceneIndex * 15) + (tutProgress / 1000));
-  const mm = String(Math.floor(currentSeconds / 60)).padStart(2, '0');
-  const ss = String(currentSeconds % 60).padStart(2, '0');
-  if (DOM.tutTimestamp) DOM.tutTimestamp.textContent = `${mm}:${ss} / 02:15`;
+if (DOM.btnOpenTutorialStep) DOM.btnOpenTutorialStep.onclick = openTutorialStepModal;
+if (DOM.btnPlayTutorialStep) DOM.btnPlayTutorialStep.onclick = openTutorialStepModal;
+if (DOM.btnCloseTutorialStep) DOM.btnCloseTutorialStep.onclick = closeTutorialStepModal;
 
-  if (tutProgress >= scene.durationMs) {
-    if (tutSceneIndex < TUT_SCENES.length - 1) {
-      loadTutScene(tutSceneIndex + 1);
+if (DOM.btnTutPrev) {
+  DOM.btnTutPrev.onclick = () => {
+    if (tutCurrentStep > 0) renderTutStep(tutCurrentStep - 1);
+  };
+}
+
+if (DOM.btnTutNext) {
+  DOM.btnTutNext.onclick = () => {
+    if (tutCurrentStep < TUTORIAL_STEPS.length - 1) {
+      renderTutStep(tutCurrentStep + 1);
     } else {
-      loadTutScene(0);
+      closeTutorialStepModal();
+      DOM.btnPlaySoloInstant.click();
     }
+  };
+}
+
+// ==========================================
+// MODAL HISTÓRICO DE AÇÕES (LOG)
+// ==========================================
+const renderGameLogModal = () => {
+  if (!gameState || !gameState.logs || gameState.logs.length === 0) {
+    DOM.gameLogList.innerHTML = `<div class="text-xs text-slate-400 italic text-center py-6">Nenhuma ação registrada nesta partida ainda.</div>`;
+    return;
   }
+
+  const last15 = gameState.logs.slice(0, 15);
+  DOM.gameLogList.innerHTML = last15
+    .map((log) => `
+      <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 flex items-start gap-2 shadow-sm">
+        <span class="flex-1 leading-snug">${log.text}</span>
+      </div>
+    `)
+    .join('');
 };
 
-const openTutorialModal = () => {
-  DOM.modalTutorialVideo.classList.remove('hidden');
-  tutIsPlaying = true;
-  if (DOM.tutPlayIcon) DOM.tutPlayIcon.textContent = '⏸️';
-  if (DOM.tutPlayLabel) DOM.tutPlayLabel.textContent = 'Pausar';
-  loadTutScene(0);
-  if (tutTimer) clearInterval(tutTimer);
-  tutTimer = setInterval(tutTick, 150);
-};
-
-const closeTutorialModal = () => {
-  DOM.modalTutorialVideo.classList.add('hidden');
-  tutIsPlaying = false;
-  if (tutTimer) clearInterval(tutTimer);
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
-};
-
-if (DOM.btnOpenTutorialVideo) DOM.btnOpenTutorialVideo.onclick = openTutorialModal;
-if (DOM.btnPlayTutorialVideo) DOM.btnPlayTutorialVideo.onclick = openTutorialModal;
-if (DOM.btnCloseTutorialVideo) DOM.btnCloseTutorialVideo.onclick = closeTutorialModal;
-
-if (DOM.tutBtnPlay) {
-  DOM.tutBtnPlay.onclick = () => {
-    tutIsPlaying = !tutIsPlaying;
-    DOM.tutPlayIcon.textContent = tutIsPlaying ? '⏸️' : '▶️';
-    DOM.tutPlayLabel.textContent = tutIsPlaying ? 'Pausar' : 'Reproduzir';
-    if (!tutIsPlaying && window.speechSynthesis) window.speechSynthesis.pause();
-    if (tutIsPlaying && window.speechSynthesis) window.speechSynthesis.resume();
+if (DOM.btnOpenGameLog) {
+  DOM.btnOpenGameLog.onclick = () => {
+    renderGameLogModal();
+    DOM.modalGameLog.classList.remove('hidden');
   };
 }
 
-if (DOM.tutBtnPrev) {
-  DOM.tutBtnPrev.onclick = () => loadTutScene(tutSceneIndex - 1);
-}
-if (DOM.tutBtnNext) {
-  DOM.tutBtnNext.onclick = () => loadTutScene(tutSceneIndex + 1);
-}
-
-document.querySelectorAll('.tut-tab').forEach((tab) => {
-  tab.onclick = () => {
-    const idx = parseInt(tab.getAttribute('data-tut-scene'), 10);
-    loadTutScene(idx);
-  };
-});
-
-if (DOM.tutBtnVoice) {
-  DOM.tutBtnVoice.onclick = () => {
-    tutVoiceEnabled = !tutVoiceEnabled;
-    DOM.tutBtnVoice.textContent = tutVoiceEnabled ? '🎙️ Voz: Ligada' : '🔇 Voz: Desligada';
-    if (!tutVoiceEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+if (DOM.btnCloseGameLog) {
+  DOM.btnCloseGameLog.onclick = () => {
+    DOM.modalGameLog.classList.add('hidden');
   };
 }
 

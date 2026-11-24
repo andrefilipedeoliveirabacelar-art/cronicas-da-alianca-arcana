@@ -1,5 +1,6 @@
 // ==========================================================
-// CATÁLOGO OFICIAL DE CARTAS: HEROES LOVE TO LIE (TAVERNA CAÓTICA)
+// CATÁLOGO OFICIAL DE CARTAS: CRÔNICAS DA ALIANÇA ARCANA
+// Blefe, Heróis & Caça a Monstros (Taverna Caótica)
 // 6 Classes, Líderes de Grupo, Heróis 2d6, Monstros e Magias
 // ==========================================================
 
@@ -54,14 +55,14 @@ export const CLASSES = {
   },
 };
 
-// 1. LÍDERES DE GRUPO (1 por classe, selecionáveis antes da partida)
+// 1. LÍDERES DE GRUPO (1 por classe, selecionáveis antes da partida com passivas reais)
 export const PARTY_LEADERS = [
   {
     id: 'leader_fighter',
     name: 'Valquíria Carmesim',
     heroClass: 'fighter',
     title: 'Líder dos Guerreiros',
-    passiveDescription: '+1 em todas as rolagens de 2d6 para Atacar Monstros.',
+    passiveDescription: '+1 permanente em todas as rolagens de ataque contra Monstros.',
     avatar: '⚔️',
     color: '#EF4444',
   },
@@ -70,7 +71,7 @@ export const PARTY_LEADERS = [
     name: 'Arquimago Elminster',
     heroClass: 'wizard',
     title: 'Líder dos Magos',
-    passiveDescription: 'Ao rolar 10+ em qualquer teste de 2d6, compre 1 carta imediatamente.',
+    passiveDescription: '+1 permanente ao rolar dados para ativar Habilidades de Heróis ou Magias.',
     avatar: '🔮',
     color: '#8B5CF6',
   },
@@ -79,7 +80,7 @@ export const PARTY_LEADERS = [
     name: 'Sombra de Velka',
     heroClass: 'thief',
     title: 'Líder dos Ladinos',
-    passiveDescription: 'Ao desmascarar um blefe com sucesso, roube 1 carta da mão do mentiroso.',
+    passiveDescription: 'Ao baixar uma carta em Modo Blefe sem ser contestado por "MENTIRA!", compre 1 carta grátis.',
     avatar: '🗡️',
     color: '#3B82F6',
   },
@@ -88,7 +89,7 @@ export const PARTY_LEADERS = [
     name: 'Baluarte de Ferro',
     heroClass: 'guardian',
     title: 'Líder dos Guardiões',
-    passiveDescription: 'Seus Heróis na mesa não podem ser destruídos por Magias de oponentes.',
+    passiveDescription: 'Suas cartas na Party são imunes a destruição ou sacrifício por penalidades de Monstros.',
     avatar: '🛡️',
     color: '#F59E0B',
   },
@@ -97,7 +98,7 @@ export const PARTY_LEADERS = [
     name: 'Rastreadora Silvestre',
     heroClass: 'ranger',
     title: 'Líder dos Patrulheiros',
-    passiveDescription: 'Requisitos de classes para Atacar Monstros diminuem em 1 classe.',
+    passiveDescription: 'Ao abater com sucesso qualquer Monstro no Covil, ganhe +1 PA imediato no mesmo turno.',
     avatar: '🏹',
     color: '#10B981',
   },
@@ -106,7 +107,7 @@ export const PARTY_LEADERS = [
     name: 'Menestrel Dourado',
     heroClass: 'bard',
     title: 'Líder dos Bardos',
-    passiveDescription: '+1 em todas as rolagens de Habilidades de Heróis da sua Party.',
+    passiveDescription: 'Começa a partida com 6 cartas na mão (em vez de 5) e tem +1 em rolagens de Desafio/Blefe.',
     avatar: '🎵',
     color: '#EC4899',
   },
