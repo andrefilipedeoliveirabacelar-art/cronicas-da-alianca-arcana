@@ -1,294 +1,201 @@
-import { supabase } from '../lib/supabase.js';
 import {
-  actCollect1,
-  actEpicStrike,
-  declareAction,
-  callBluff,
-  acceptAction,
-  declareBlock,
+  canAttackMonster,
+  actAttackMonster,
+  actSummonHero,
+  actDrawCard,
+  actPlaySpell,
+  actEquipItem,
+  actActivateHeroAbility,
+  actPassTurn,
+  actChallengeBluff,
+  actPlayModifier,
+  getPartyClasses,
 } from './gameLogic.js';
 
-// Roster de Bots Arcanos Temáticos
-export const BOT_ROSTER = [
-  { nickname: '🤖 Mago Alquimista', theme: 'bot_mago' },
-  { nickname: '🤖 Guardião de Gondor', theme: 'bot_guerreiro' },
-  { nickname: '🤖 Oráculo das Sombras', theme: 'bot_oraculo' },
-  { nickname: '🤖 Larápio de Erebor', theme: 'bot_ladrao' },
-  { nickname: '🤖 Semideus Titânico', theme: 'bot_semideus' },
-];
-
-export const isPlayerBot = (player) => {
-  if (!player) return false;
-  return (
-    player.nickname?.startsWith('🤖') ||
-    player.avatar_theme?.startsWith('bot_') ||
-    Boolean(player.is_bot)
-  );
-};
-
-// Adiciona um Bot à sala
-export const addBotToRoom = async (roomId, currentPlayers = []) => {
-  if (currentPlayers.length >= 5) {
-    throw new Error('A sala atingiu o limite de 5 guerreiros.');
-  }
-
-  // Encontra um bot que ainda não esteja na sala
-  const existingNames = new Set(currentPlayers.map((p) => p.nickname));
-  const availableBot = BOT_ROSTER.find((b) => !existingNames.has(b.nickname)) || {
-    nickname: `🤖 Autômato ${currentPlayers.length + 1}`,
-    theme: 'bot_mago',
-  };
-
-  const nextSeat = currentPlayers.length + 1;
-
-  const { data: botPlayer, error } = await supabase
-    .from('players')
-    .insert([
-      {
-        room_id: roomId,
-        nickname: availableBot.nickname,
-        avatar_theme: availableBot.theme,
-        seat_order: nextSeat,
-        runes: 2,
-        is_alive: true,
-        is_host: false,
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) throw new Error(`Falha ao invocar Bot: ${error.message}`);
-  return botPlayer;
-};
-
-// Gerenciador de IA dos Bots (Executado centralizadamente pelo Host da Sala)
+/**
+ * INTELIGÊNCIA ARTIFICIAL DOS BOTS: HEROES LOVE TO LIE
+ * Toma decisões estratégicas autônomas de forma fluida e humanizada.
+ */
 class BotAIEngine {
   constructor() {
-    this.pendingTurnTimer = null;
-    this.pendingReactionTimer = null;
-    this.processedActionId = null;
+    this.turnTimer = null;
+    this.reactionTimer = null;
+    this.isEvaluating = false;
   }
 
   clearTimers() {
-    if (this.pendingTurnTimer) {
-      clearTimeout(this.pendingTurnTimer);
-      this.pendingTurnTimer = null;
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
     }
-    if (this.pendingReactionTimer) {
-      clearTimeout(this.pendingReactionTimer);
-      this.pendingReactionTimer = null;
+    if (this.reactionTimer) {
+      clearTimeout(this.reactionTimer);
+      this.reactionTimer = null;
     }
   }
 
-  /**
-   * Avalia o estado da sala e toma decisões se houver Bot ativo
-   */
-  evaluate({ room, players, hands, isHost }) {
-    if (!isHost || !room || room.status !== 'playing') {
+  // Avalia o estado do jogo e engatilha ações para o bot
+  evaluate(state, onStateUpdate) {
+    if (!state || state.status !== 'playing') {
       this.clearTimers();
       return;
     }
 
-    const currentTurnPlayer = players.find((p) => p.id === room.current_turn_player_id);
+    // 1. REAÇÃO A BLEFE / MODIFICADORES
+    if (state.pendingReaction && !this.reactionTimer) {
+      const reaction = state.pendingReaction;
+      const aliveBots = state.players.filter((p) => p.isBot && p.id !== reaction.initiatorId);
 
-    // 1. TURNO DO BOT (Fase de Ação)
-    if (room.turn_phase === 'action') {
-      if (currentTurnPlayer && isPlayerBot(currentTurnPlayer) && currentTurnPlayer.is_alive) {
-        if (!this.pendingTurnTimer) {
-          const delay = 1600 + Math.random() * 900; // 1.6s a 2.5s
-          this.pendingTurnTimer = setTimeout(() => {
-            this.executeBotTurn(room, currentTurnPlayer, players, hands);
-            this.pendingTurnTimer = null;
-          }, delay);
-        }
-      } else {
-        if (this.pendingTurnTimer) {
-          clearTimeout(this.pendingTurnTimer);
-          this.pendingTurnTimer = null;
-        }
+      if (aliveBots.length > 0) {
+        this.reactionTimer = setTimeout(() => {
+          this.decideBotReaction(state, aliveBots, onStateUpdate);
+          this.reactionTimer = null;
+        }, 1800 + Math.random() * 1200); // 1.8s a 3.0s de hesitação natural
       }
+      return;
     }
 
-    // 2. REAÇÃO DO BOT (Janela de Contestação ou Bloqueio)
-    if (room.turn_phase === 'challenge_window' || room.turn_phase === 'block_window') {
-      const pending = room.pending_action;
-      if (!pending) return;
+    // 2. TURNO DE AÇÃO DO BOT
+    const currentTurnPlayer = state.players.find((p) => p.id === state.turnPlayerId);
+    if (currentTurnPlayer && currentTurnPlayer.isBot && !this.turnTimer) {
+      this.turnTimer = setTimeout(() => {
+        this.executeBotAction(state, currentTurnPlayer, onStateUpdate);
+        this.turnTimer = null;
+      }, 1200 + Math.random() * 1000); // 1.2s a 2.2s de leitura
+    }
+  }
 
-      const actionKey = `${room.turn_phase}_${pending.actor_id}_${pending.action_code}_${pending.blocked_by_id || ''}`;
-      if (this.processedActionId === actionKey) return;
+  // Decisão de reação a blefe
+  decideBotReaction(state, bots, onStateUpdate) {
+    const reaction = state.pendingReaction;
+    if (!reaction) return;
 
-      // Encontra bots vivos elegíveis para reagir
-      const aliveBots = players.filter((p) => isPlayerBot(p) && p.is_alive);
+    // Um dos bots decide se desafia ("🚨 MENTIRA!")
+    for (const bot of bots) {
+      let challengeChance = 0.15; // Chance base de desconfiança
 
-      if (aliveBots.length > 0 && !this.pendingReactionTimer) {
-        const reactionDelay = 1800 + Math.random() * 800; // 1.8s a 2.6s
-        this.pendingReactionTimer = setTimeout(() => {
-          this.executeBotReactions(room, aliveBots, players, hands);
-          this.processedActionId = actionKey;
-          this.pendingReactionTimer = null;
-        }, reactionDelay);
+      // Se foi baixado explicitamente em MODO BLEFE
+      if (reaction.isBluff) {
+        challengeChance = 0.45;
+
+        // Se o iniciante estiver prestes a vencer por 6 classes
+        const initiator = state.players.find((p) => p.id === reaction.initiatorId);
+        if (initiator && getPartyClasses(initiator).length >= 5) {
+          challengeChance = 0.75;
+        }
+
+        // Se o iniciante precisa dessa classe para atacar o 3º monstro
+        if (initiator && initiator.slainMonsters.length >= 2) {
+          challengeChance = 0.8;
+        }
       }
-    } else {
-      this.processedActionId = null;
-      if (this.pendingReactionTimer) {
-        clearTimeout(this.pendingReactionTimer);
-        this.pendingReactionTimer = null;
+
+      if (Math.random() < challengeChance) {
+        actChallengeBluff(state, bot.id);
+        if (onStateUpdate) onStateUpdate(state);
+        return;
       }
     }
   }
 
-  // Executa a escolha de ação do Bot
-  async executeBotTurn(room, bot, players, hands) {
-    try {
-      const botHands = hands.filter((h) => h.player_id === bot.id && !h.is_revealed);
-      const botCardCodes = botHands.map((h) => h.card_code);
-      const aliveOpponents = players.filter((p) => p.id !== bot.id && p.is_alive);
+  // Executa uma ação inteligente no turno do Bot
+  executeBotAction(state, bot, onStateUpdate) {
+    if (state.status !== 'playing' || state.turnPlayerId !== bot.id) return;
 
-      if (aliveOpponents.length === 0) return;
+    // Se acabou o PA, passa o turno
+    if (state.currentPA <= 0) {
+      actPassTurn(state);
+      if (onStateUpdate) onStateUpdate(state);
+      return;
+    }
 
-      // Alvo prioritário (quem tem mais Runas ou menos cartas)
-      const target = [...aliveOpponents].sort((a, b) => b.runes - a.runes)[0];
+    const partyClasses = getPartyClasses(bot);
 
-      const runes = bot.runes || 0;
+    // PRIORIDADE 1: ATACAR MONSTRO (se tiver PA e cumprir os requisitos)
+    const hasSkeletonDragon = bot.slainMonsters.some((m) => m.id === 'monster_2');
+    const attackCost = hasSkeletonDragon ? 1 : 2;
 
-      // 1. Regra Obrigatória: 10+ Runas exige Golpe Épico
-      if (runes >= 10) {
-        await actEpicStrike(room.id, bot, target);
+    if (state.currentPA >= attackCost) {
+      const attackableMonster = state.activeMonsters.find((m) => canAttackMonster(bot, m));
+      if (attackableMonster) {
+        actAttackMonster(state, bot.id, attackableMonster.id);
+        if (onStateUpdate) onStateUpdate(state);
+        return;
+      }
+    }
+
+    // PRIORIDADE 2: INVOCAR HERÓI DA MÃO
+    const heroIndices = [];
+    bot.hand.forEach((card, idx) => {
+      if (card.type === 'hero') heroIndices.push(idx);
+    });
+
+    if (heroIndices.length > 0 && state.currentPA >= 1) {
+      // Procura um herói cuja classe ainda não esteja na party
+      const missingClassHeroIdx = heroIndices.find((idx) => !partyClasses.includes(bot.hand[idx].heroClass));
+
+      if (missingClassHeroIdx !== undefined) {
+        // Invoca honestamente
+        actSummonHero(state, bot.id, missingClassHeroIdx, false);
+        if (onStateUpdate) onStateUpdate(state);
         return;
       }
 
-      // 2. Se tiver 7 a 9 Runas: 80% chance de Golpe Épico
-      if (runes >= 7 && Math.random() < 0.8) {
-        await actEpicStrike(room.id, bot, target);
+      // Se já tem essa classe ou quer blefar para atacar um monstro
+      const allClassKeys = ['fighter', 'wizard', 'thief', 'guardian', 'ranger', 'bard'];
+      const missingClasses = allClassKeys.filter((c) => !partyClasses.includes(c));
+
+      // 35% de chance de blefar uma classe que falta para atacar monstros ou vencer
+      if (missingClasses.length > 0 && Math.random() < 0.35) {
+        const bluffedClass = missingClasses[Math.floor(Math.random() * missingClasses.length)];
+        actSummonHero(state, bot.id, heroIndices[0], true, bluffedClass);
+        if (onStateUpdate) onStateUpdate(state);
         return;
       }
 
-      // 3. Escolha entre ação real (70%) e blefe (30%)
-      const isBluffing = Math.random() < 0.3;
-
-      if (!isBluffing && botCardCodes.length > 0) {
-        // Tenta usar uma carta que realmente possui
-        const cardToUse = botCardCodes[Math.floor(Math.random() * botCardCodes.length)];
-
-        if (cardToUse === 'DEMIGOD' && runes >= 3) {
-          await declareAction(room.id, bot, 'ASSASSINATE', target);
-          return;
-        } else if (cardToUse === 'RINGBEARER') {
-          await declareAction(room.id, bot, 'STEAL', target);
-          return;
-        } else if (cardToUse === 'DRAGONSLAYER') {
-          await declareAction(room.id, bot, 'TAX_TREASURY');
-          return;
-        } else if (cardToUse === 'ARCHMAGE') {
-          await declareAction(room.id, bot, 'ARCHMAGE_EXCHANGE');
-          return;
-        } else if (cardToUse === 'RELIC_KEEPER') {
-          await declareAction(room.id, bot, 'PERPETUAL_VOW');
-          return;
-        } else if (cardToUse === 'ORACLE') {
-          await declareAction(room.id, bot, 'DIVINATION', target);
-          return;
-        } else if (cardToUse === 'DARK_LORD') {
-          await declareAction(room.id, bot, 'DARK_DRAIN');
-          return;
-        }
-      }
-
-      // 4. Se for blefe ou ação básica:
-      const randomRoll = Math.random();
-      if (randomRoll < 0.35) {
-        // Coletar 1 Runa
-        await actCollect1(room.id, bot);
-      } else if (randomRoll < 0.65) {
-        // Ajuda da Guilda (+2)
-        await declareAction(room.id, bot, 'GUILD_AID');
-      } else if (runes >= 3 && Math.random() < 0.5) {
-        // Blefe de Semideus (Assassinar)
-        await declareAction(room.id, bot, 'ASSASSINATE', target);
-      } else {
-        // Blefe de Pilhagem de Smaug (+3)
-        await declareAction(room.id, bot, 'TAX_TREASURY');
-      }
-    } catch (err) {
-      console.warn('[BotAI] Exceção no turno do bot:', err);
-      // Fallback de segurança para não travar: coleta 1 runa
-      try {
-        await actCollect1(room.id, bot);
-      } catch (e) {}
+      // Senão baixa o herói honestamente
+      actSummonHero(state, bot.id, heroIndices[0], false);
+      if (onStateUpdate) onStateUpdate(state);
+      return;
     }
-  }
 
-  // Executa reação dos Bots na janela de contestação ou bloqueio
-  async executeBotReactions(room, aliveBots, players, hands) {
-    try {
-      const pending = room.pending_action;
-      if (!pending) return;
-
-      const isBlockContest = Boolean(pending.blocked_by_id);
-      const claimantId = isBlockContest ? pending.blocked_by_id : pending.actor_id;
-      const claimedCard = isBlockContest ? pending.block_card : pending.claimed_card;
-
-      for (const bot of aliveBots) {
-        // O autor da afirmação não contesta a si mesmo
-        if (bot.id === claimantId) continue;
-
-        const botHands = hands.filter((h) => h.player_id === bot.id && !h.is_revealed);
-        const botCardCodes = botHands.map((h) => h.card_code);
-
-        // Se estiver na janela de contestação ("MENTIRA!")
-        if (room.turn_phase === 'challenge_window') {
-          // Lógica de dedução:
-          // Se o bot tem 2 cópias da carta alegada -> 90% chance de chamar mentira!
-          const botCopies = botCardCodes.filter((c) => c === claimedCard).length;
-          
-          let callBluffChance = 0.08; // 8% desconfiança natural
-          if (botCopies >= 2) callBluffChance = 0.90;
-          else if (botCopies === 1) callBluffChance = 0.25;
-
-          if (Math.random() < callBluffChance) {
-            await callBluff(room.id, bot);
-            return; // Uma contestação encerra a janela
-          } else {
-            await acceptAction(room.id, bot);
-          }
-        }
-
-        // Se estiver na janela de bloqueio ("block_window")
-        if (room.turn_phase === 'block_window') {
-          const isTarget = pending.target_id === bot.id;
-          const isGuildAid = pending.action_code === 'GUILD_AID';
-
-          if (isTarget || isGuildAid) {
-            let blockCardToUse = null;
-
-            if (isGuildAid && botCardCodes.includes('DEMIGOD')) {
-              blockCardToUse = 'DEMIGOD';
-            } else if (pending.action_code === 'STEAL') {
-              if (botCardCodes.includes('RINGBEARER')) blockCardToUse = 'RINGBEARER';
-              else if (botCardCodes.includes('ARCHMAGE')) blockCardToUse = 'ARCHMAGE';
-              else if (botCardCodes.includes('DARK_LORD')) blockCardToUse = 'DARK_LORD';
-            } else if (pending.action_code === 'ASSASSINATE') {
-              if (botCardCodes.includes('RELIC_KEEPER')) blockCardToUse = 'RELIC_KEEPER';
-            }
-
-            // 85% de chance de bloquear se possuir a carta; 20% de blefar bloqueio se não tiver
-            if (blockCardToUse && Math.random() < 0.85) {
-              await declareBlock(room.id, bot, blockCardToUse);
-              return;
-            } else if (!blockCardToUse && isTarget && Math.random() < 0.20) {
-              // Blefe de bloqueio
-              const bluffBlock = pending.action_code === 'ASSASSINATE' ? 'RELIC_KEEPER' : 'RINGBEARER';
-              await declareBlock(room.id, bot, bluffBlock);
-              return;
-            } else {
-              await acceptAction(room.id, bot);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[BotAI] Exceção na reação do bot:', err);
+    // PRIORIDADE 3: JOGAR MAGIA (se tiver na mão)
+    const spellIdx = bot.hand.findIndex((c) => c.type === 'spell');
+    if (spellIdx !== -1 && state.currentPA >= 1) {
+      actPlaySpell(state, bot.id, spellIdx);
+      if (onStateUpdate) onStateUpdate(state);
+      return;
     }
+
+    // PRIORIDADE 4: EQUIPAR ITEM EM UM HERÓI SEM ITEM
+    const itemIdx = bot.hand.findIndex((c) => c.type === 'item');
+    if (itemIdx !== -1 && state.currentPA >= 1 && bot.party.length > 0) {
+      const heroWithoutItem = bot.party.find((h) => !h.equippedItem);
+      if (heroWithoutItem) {
+        actEquipItem(state, bot.id, itemIdx, heroWithoutItem.instanceId);
+        if (onStateUpdate) onStateUpdate(state);
+        return;
+      }
+    }
+
+    // PRIORIDADE 5: ATIVAR HABILIDADE DE HERÓI DISPONÍVEL NA MESA
+    const heroWithAbility = bot.party.find((h) => !h.abilityUsedThisTurn && h.card.rollTarget);
+    if (heroWithAbility && state.currentPA >= 1) {
+      actActivateHeroAbility(state, bot.id, heroWithAbility.instanceId);
+      if (onStateUpdate) onStateUpdate(state);
+      return;
+    }
+
+    // PRIORIDADE 6: COMPRAR CARTA (se tiver menos de 4 cartas ou sem outras opções)
+    if (state.currentPA >= 1) {
+      actDrawCard(state, bot.id);
+      if (onStateUpdate) onStateUpdate(state);
+      return;
+    }
+
+    // Passa o turno
+    actPassTurn(state);
+    if (onStateUpdate) onStateUpdate(state);
   }
 }
 

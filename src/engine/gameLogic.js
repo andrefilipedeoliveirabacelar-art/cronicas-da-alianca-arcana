@@ -1,1169 +1,691 @@
-import { supabase } from '../lib/supabase.js';
 import {
-  trackCardUsage,
-  trackCombatStrike,
-  trackBluffCall,
-  trackBlock,
-  trackMatchOutcome,
-} from './statsService.js';
+  CLASSES,
+  PARTY_LEADERS,
+  HEROES_CATALOG,
+  MONSTERS_CATALOG,
+  UTILITY_CATALOG,
+  buildFullMainDeck,
+  buildMonsterDeck,
+  shuffle,
+  getCardById,
+} from './gameCatalog.js';
+import { soundManager } from '../lib/soundFX.js';
 
-// Catálogo Mestre de 35 Cartas (7 Arquétipos x 5 Cópias Cada)
-export const CARD_CATALOG = [
-  {
-    code: 'ARCHMAGE',
-    name: 'Arquimago Supremo',
-    universe_ref: 'Harry Potter',
-    faction_color: '#8B5CF6',
-    active_ability_name: 'Transfiguração',
-    active_description: 'Compra 2 cartas do grimório, escolhe quais manter e devolve 2 ao fundo do baralho.',
-    block_ability_name: 'Contrafeitiço',
-    block_description: 'Bloqueia o Manto Élfico (Portador do Anel) e a Profecia Arcana (Oráculo).',
-    copies_in_deck: 5,
-    icon: '🧙‍♂️',
-  },
-  {
-    code: 'RINGBEARER',
-    name: 'Portador do Anel',
-    universe_ref: 'O Senhor dos Anéis',
-    faction_color: '#F59E0B',
-    active_ability_name: 'Manto Élfico',
-    active_description: 'Rouba até 2 Runas de um adversário à sua escolha.',
-    block_ability_name: 'Invisibilidade',
-    block_description: 'Bloqueia tentativas de roubo de outro Portador do Anel.',
-    copies_in_deck: 5,
-    icon: '💍',
-  },
-  {
-    code: 'DEMIGOD',
-    name: 'Semideus do Olimpo',
-    universe_ref: 'Percy Jackson',
-    faction_color: '#06B6D4',
-    active_ability_name: 'Fúria Olímpica',
-    active_description: 'Paga 3 Runas e desfere um ataque letal: o alvo perde 1 identidade arcana.',
-    block_ability_name: 'Barreira Celeste',
-    block_description: 'Bloqueia a Ajuda da Guilda coletada por qualquer jogador.',
-    copies_in_deck: 5,
-    icon: '⚡',
-  },
-  {
-    code: 'DRAGONSLAYER',
-    name: 'Caçador de Dragões',
-    universe_ref: 'O Hobbit',
-    faction_color: '#EF4444',
-    active_ability_name: 'Pilhagem de Smaug',
-    active_description: 'Saqueia o tesouro ancestral de Erebor, recebendo imediatamente +3 Runas.',
-    block_ability_name: 'Resistência Dracônica',
-    block_description: 'Aura inabalável imune a tributos forçados.',
-    copies_in_deck: 5,
-    icon: '🐉',
-  },
-  {
-    code: 'RELIC_KEEPER',
-    name: 'Guardião das Relíquias',
-    universe_ref: 'Harry Potter',
-    faction_color: '#10B981',
-    active_ability_name: 'Voto Perpétuo',
-    active_description: 'Recebe +2 Runas puras do santuário arcano (ação sagrada não bloqueável).',
-    block_ability_name: 'Escudo das Relíquias',
-    block_description: 'Bloqueia o golpe mortal da Fúria Olímpica (Semideus).',
-    copies_in_deck: 5,
-    icon: '🛡️',
-  },
-  {
-    code: 'ORACLE',
-    name: 'Oráculo de Delfos',
-    universe_ref: 'Percy Jackson',
-    faction_color: '#EC4899',
-    active_ability_name: 'Profecia Arcana',
-    active_description: 'Espia secretamente 1 carta oculta de um adversário e ganha +1 Runa de oferenda.',
-    block_ability_name: 'Névoa Mística',
-    block_description: 'Bloqueia tentativas de espionagem do Oráculo adversário.',
-    copies_in_deck: 5,
-    icon: '🔮',
-  },
-  {
-    code: 'DARK_LORD',
-    name: 'Lorde das Sombras',
-    universe_ref: 'Senhor dos Anéis & Harry Potter',
-    faction_color: '#6366F1',
-    active_ability_name: 'Drenagem Sombria',
-    active_description: 'Extorque 1 Runa de cada adversário vivo na mesa para o seu poder.',
-    block_ability_name: 'Manto das Trevas',
-    block_description: 'Bloqueia o roubo do Portador do Anel e a espionagem do Oráculo.',
-    copies_in_deck: 5,
-    icon: '👁️',
-  },
-];
+/**
+ * MOTOR DE REGRAS: HEROES LOVE TO LIE
+ * Suporta 100% modo Solo Local (in-memory) e Multiplayer em tempo real.
+ */
 
-export const getCardByCode = (code) => {
-  return CARD_CATALOG.find((c) => c.code === code) || {
-    code,
-    name: code,
-    universe_ref: 'Reino Desconhecido',
-    faction_color: '#64748B',
-    active_ability_name: 'Ação Desconhecida',
-    active_description: '',
-    block_ability_name: 'Bloqueio',
-    block_description: '',
-    icon: '🃏',
+// Cria uma nova partida Solo com 1 Humano e 2 Bots Arcanos
+export const createSoloGame = (humanNickname, chosenLeaderId = 'leader_fighter', botCount = 2) => {
+  const mainDeck = buildFullMainDeck();
+  const monsterDeck = buildMonsterDeck();
+
+  // 3 monstros ativos no Covil
+  const activeMonsters = [monsterDeck.pop(), monsterDeck.pop(), monsterDeck.pop()];
+
+  const humanLeader = PARTY_LEADERS.find((l) => l.id === chosenLeaderId) || PARTY_LEADERS[0];
+  const availableLeaders = PARTY_LEADERS.filter((l) => l.id !== chosenLeaderId);
+  shuffle(availableLeaders);
+
+  const players = [];
+
+  // Jogador Humano
+  players.push({
+    id: 'player_human',
+    nickname: humanNickname || 'Você',
+    isHost: true,
+    isBot: false,
+    leader: humanLeader,
+    party: [], // Heróis na mesa
+    slainMonsters: [], // Troféus de monstros
+    hand: [mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop()],
+  });
+
+  // Bots Oponentes
+  const botNames = ['🤖 Valquíria de Sangue', '🤖 Mago Alquimista', '🤖 Ladino das Sombras'];
+  for (let i = 0; i < botCount; i++) {
+    const leader = availableLeaders[i] || PARTY_LEADERS[i + 1];
+    players.push({
+      id: `bot_${i + 1}`,
+      nickname: botNames[i] || `🤖 Bot Arcano ${i + 1}`,
+      isHost: false,
+      isBot: true,
+      leader: leader,
+      party: [],
+      slainMonsters: [],
+      hand: [mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop(), mainDeck.pop()],
+    });
+  }
+
+  const gameState = {
+    id: `solo_${Date.now()}`,
+    status: 'playing',
+    turnIndex: 0,
+    turnPlayerId: players[0].id,
+    currentPA: 3,
+    maxPA: 3,
+    activeMonsters,
+    monsterDeck,
+    mainDeck,
+    discardPile: [],
+    players,
+    diceState: {
+      die1: 1,
+      die2: 1,
+      total: 2,
+      isRolling: false,
+      purpose: null,
+      targetName: '',
+      modifiers: 0,
+    },
+    pendingReaction: null, // Janela de blefe e modificadores
+    logs: [
+      { text: `⚔️ A contenda na Taverna começou! Bem-vindo, ${humanNickname}!`, type: 'action' },
+    ],
+    winner: null,
   };
+
+  return gameState;
 };
 
-// Embaralhamento Fisher-Yates imutável
-export const shuffleArray = (array) => {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+// Rolagem aleatória de dados 2d6
+export const roll2d6 = () => {
+  const die1 = Math.floor(Math.random() * 6) + 1;
+  const die2 = Math.floor(Math.random() * 6) + 1;
+  return { die1, die2, total: die1 + die2 };
 };
 
-// Gera código de sala alfanumérico com 4 letras maiúsculas
-export const generateRoomCode = () => {
-  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let result = '';
-  for (let i = 0; i < 4; i++) {
-    result += letters.charAt(Math.floor(Math.random() * letters.length));
-  }
-  return result;
-};
-
-// Registra mensagem no feed de crônicas da partida
-export const addGameLog = async (roomId, actorNickname, eventType, message) => {
-  try {
-    const { error } = await supabase.from('game_logs').insert([
-      {
-        room_id: roomId,
-        actor_nickname: actorNickname || 'Sistema',
-        event_type: eventType,
-        message,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-    if (error) console.error('[addGameLog] Erro ao gravar log:', error);
-  } catch (err) {
-    console.error('[addGameLog] Exceção:', err);
-  }
-};
-
-// 1. LOBBY: Criar Sala
-export const createRoom = async (hostNickname, avatarTheme = 'mago') => {
-  const code = generateRoomCode();
-  
-  // Cria a sala
-  const { data: roomData, error: roomError } = await supabase
-    .from('rooms')
-    .insert([
-      {
-        code,
-        status: 'waiting',
-        turn_phase: 'action',
-        deck: [],
-      },
-    ])
-    .select()
-    .single();
-
-  if (roomError) throw new Error(`Falha ao criar sala: ${roomError.message}`);
-
-  // Insere o host
-  const { data: playerData, error: playerError } = await supabase
-    .from('players')
-    .insert([
-      {
-        room_id: roomData.id,
-        nickname: hostNickname.trim(),
-        avatar_theme: avatarTheme,
-        seat_order: 1,
-        runes: 2,
-        is_alive: true,
-        is_host: true,
-      },
-    ])
-    .select()
-    .single();
-
-  if (playerError) throw new Error(`Falha ao entrar como Host: ${playerError.message}`);
-
-  await addGameLog(roomData.id, hostNickname, 'SYSTEM', `A sala ${code} foi forjada por ${hostNickname}.`);
-
-  return { room: roomData, player: playerData };
-};
-
-// 2. LOBBY: Entrar na Sala
-export const joinRoom = async (roomCode, nickname, avatarTheme = 'guerreiro') => {
-  const cleanCode = roomCode.trim().toUpperCase();
-
-  // Busca a sala
-  const { data: room, error: roomError } = await supabase
-    .from('rooms')
-    .select('*')
-    .eq('code', cleanCode)
-    .single();
-
-  if (roomError || !room) {
-    throw new Error('Sala não encontrada. Verifique o código de 4 letras.');
+// Verifica quais classes uma Party possui atualmente (considerando cartas honestas e declaradas em blefe)
+export const getPartyClasses = (player) => {
+  const classes = new Set();
+  if (player.leader && player.leader.heroClass) {
+    classes.add(player.leader.heroClass);
   }
 
-  if (room.status !== 'waiting') {
-    throw new Error('Esta partida já está em andamento ou foi finalizada.');
-  }
-
-  // Busca jogadores atuais para verificar limite e ordem de assento
-  const { data: currentPlayers, error: countError } = await supabase
-    .from('players')
-    .select('*')
-    .eq('room_id', room.id)
-    .order('seat_order', { ascending: true });
-
-  if (countError) throw new Error('Falha ao verificar jogadores da sala.');
-
-  if (currentPlayers.length >= 5) {
-    throw new Error('A sala atingiu o limite máximo de 5 nobres arcanos (2 a 5 jogadores).');
-  }
-
-  const nextSeat = currentPlayers.length + 1;
-
-  const { data: player, error: playerError } = await supabase
-    .from('players')
-    .insert([
-      {
-        room_id: room.id,
-        nickname: nickname.trim(),
-        avatar_theme: avatarTheme,
-        seat_order: nextSeat,
-        runes: 2,
-        is_alive: true,
-        is_host: false,
-      },
-    ])
-    .select()
-    .single();
-
-  if (playerError) throw new Error(`Falha ao entrar na sala: ${playerError.message}`);
-
-  await addGameLog(room.id, nickname, 'SYSTEM', `${nickname} juntou-se à aliança arcana.`);
-
-  return { room, player };
-};
-
-// 3. INICIAR PARTIDA (Apenas Host, Mínimo 2 e Máximo 5 jogadores)
-export const startGame = async (roomId) => {
-  const { data: players, error: pError } = await supabase
-    .from('players')
-    .select('*')
-    .eq('room_id', roomId)
-    .order('seat_order', { ascending: true });
-
-  if (pError || !players || players.length < 2) {
-    throw new Error('A partida precisa de pelo menos 2 guerreiros para iniciar.');
-  }
-
-  const playerCount = players.length;
-
-  // Calibragem dinâmica do baralho baseada nas regras oficiais do Coup:
-  // Para que o blefe e a contagem de cartas funcionem com perfeição:
-  // - 2 Jogadores: 2 cópias de cada carta (14 cartas no total)
-  // - 3 Jogadores: 3 cópias de cada carta (21 cartas no total)
-  // - 4 Jogadores: 4 cópias de cada carta (28 cartas no total)
-  // - 5 Jogadores: 5 cópias de cada carta (35 cartas no total)
-  const copiesPerCard = Math.min(5, Math.max(2, playerCount));
-
-  let rawDeck = [];
-  CARD_CATALOG.forEach((card) => {
-    for (let i = 0; i < copiesPerCard; i++) {
-      rawDeck.push(card.code);
-    }
+  player.party.forEach((p) => {
+    // Se for blefe, conta a classe declarada; se for honesto, conta a classe real
+    const heroClass = p.isBluff ? p.declaredClass : p.card.heroClass;
+    if (heroClass) classes.add(heroClass);
   });
 
-  const shuffledDeck = shuffleArray(rawDeck);
+  return Array.from(classes);
+};
 
-  // Distribui 2 cartas para cada jogador
-  const handInserts = [];
-  players.forEach((player) => {
-    const card1 = shuffledDeck.pop();
-    const card2 = shuffledDeck.pop();
+// Verifica se um jogador cumpre os requisitos de classes para atacar um Monstro
+export const canAttackMonster = (player, monster) => {
+  if (!player || !monster) return false;
+  const partyClasses = getPartyClasses(player);
 
-    handInserts.push({
-      room_id: roomId,
-      player_id: player.id,
-      card_code: card1,
-      slot_index: 1,
-      is_revealed: false,
+  let required = [...monster.requiredClasses];
+
+  // Passiva da Patrulheira: exige 1 classe a menos!
+  if (player.leader && player.leader.id === 'leader_ranger' && required.length > 1) {
+    required.pop();
+  }
+
+  return required.every((reqClass) => partyClasses.includes(reqClass));
+};
+
+// Verifica condições de vitória instantânea
+export const checkVictory = (player) => {
+  if (!player) return null;
+
+  // Condição 1: Caçador Supremo (3 Monstros Abatidos)
+  if (player.slainMonsters.length >= 3) {
+    return {
+      winner: player,
+      reason: `🏆 CAÇADOR SUPREMO! ${player.nickname} abateu 3 Monstros Lendários e conquistou a Taverna!`,
+    };
+  }
+
+  // Condição 2: Aliança Completa (6 Classes Diferentes na Party)
+  const partyClasses = getPartyClasses(player);
+  if (partyClasses.length >= 6) {
+    return {
+      winner: player,
+      reason: `👑 ALIANÇA COMPLETA! ${player.nickname} uniu todas as 6 Classes de Heróis na sua Party!`,
+    };
+  }
+
+  return null;
+};
+
+// AÇÃO: Comprar 1 Carta (1 PA)
+export const actDrawCard = (state, playerId) => {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || state.currentPA < 1) return false;
+
+  state.currentPA -= 1;
+  soundManager.playPACrystal();
+
+  // Reembaralha se o deck principal estiver vazio
+  if (state.mainDeck.length === 0 && state.discardPile.length > 0) {
+    state.mainDeck = shuffle([...state.discardPile]);
+    state.discardPile = [];
+  }
+
+  if (state.mainDeck.length > 0) {
+    const card = state.mainDeck.pop();
+    player.hand.push(card);
+    state.logs.unshift({
+      text: `🎴 ${player.nickname} comprou 1 carta do baralho (-1 PA).`,
+      type: 'action',
     });
+  }
 
-    handInserts.push({
-      room_id: roomId,
-      player_id: player.id,
-      card_code: card2,
-      slot_index: 2,
-      is_revealed: false,
+  return true;
+};
+
+// AÇÃO: Invocar Herói (1 PA) - Honesto ou Modo Blefe
+export const actSummonHero = (state, playerId, handIndex, isBluff = false, declaredClass = null) => {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || state.currentPA < 1 || !player.hand[handIndex]) return false;
+
+  const card = player.hand.splice(handIndex, 1)[0];
+  state.currentPA -= 1;
+  soundManager.playPACrystal();
+
+  const heroEntry = {
+    instanceId: card.instanceId || `${card.id}_${Date.now()}`,
+    card,
+    declaredClass: isBluff ? declaredClass : card.heroClass,
+    isBluff,
+    isRevealed: !isBluff,
+    equippedItem: null,
+    abilityUsedThisTurn: false,
+  };
+
+  player.party.push(heroEntry);
+
+  const className = CLASSES[heroEntry.declaredClass]?.name || heroEntry.declaredClass;
+
+  if (isBluff) {
+    state.logs.unshift({
+      text: `🎭 ${player.nickname} baixou uma carta em MODO BLEFE declarando ser [${className}]!`,
+      type: 'bluff',
     });
-  });
-
-  // Salva mãos no Supabase
-  const { error: handError } = await supabase.from('player_hands').insert(handInserts);
-  if (handError) throw new Error(`Erro ao distribuir cartas: ${handError.message}`);
-
-  // Regra Oficial Coup para 2 Jogadores:
-  // O Jogador 1 (que joga primeiro) inicia com 1 Runa para equilibrar a iniciativa;
-  // O Jogador 2 inicia com 2 Runas.
-  // Para 3 a 5 jogadores, todos iniciam com 2 Runas.
-  if (playerCount === 2) {
-    await supabase.from('players').update({ runes: 1 }).eq('id', players[0].id);
-    await supabase.from('players').update({ runes: 2 }).eq('id', players[1].id);
-  }
-
-  // Primeiro jogador a jogar
-  const firstPlayer = players[0];
-
-  // Atualiza estado da sala
-  const { error: roomUpdateError } = await supabase
-    .from('rooms')
-    .update({
-      status: 'playing',
-      turn_phase: 'action',
-      current_turn_player_id: firstPlayer.id,
-      deck: shuffledDeck,
-      pending_action: null,
-      winner_player_id: null,
-    })
-    .eq('id', roomId);
-
-  if (roomUpdateError) throw new Error(`Erro ao iniciar sala: ${roomUpdateError.message}`);
-
-  await addGameLog(
-    roomId,
-    firstPlayer.nickname,
-    'SYSTEM',
-    `⚔️ Duelo iniciado com ${playerCount} jogadores! Grimório calibrado com ${rawDeck.length} cartas (${copiesPerCard} de cada arquétipo). Vez de ${firstPlayer.nickname}.`
-  );
-};
-
-// 4. REVANCHE INSTANTÂNEA NA MESMA SALA
-export const rematchGame = async (roomId) => {
-  const { data: players, error: pError } = await supabase
-    .from('players')
-    .select('*')
-    .eq('room_id', roomId)
-    .order('seat_order', { ascending: true });
-
-  if (pError || !players || players.length < 2) {
-    throw new Error('Mínimo de 2 guerreiros para a revanche.');
-  }
-
-  // Remove cartas anteriores
-  await supabase.from('player_hands').delete().eq('room_id', roomId);
-
-  const playerCount = players.length;
-  const copiesPerCard = Math.min(5, Math.max(2, playerCount));
-
-  let rawDeck = [];
-  CARD_CATALOG.forEach((card) => {
-    for (let i = 0; i < copiesPerCard; i++) {
-      rawDeck.push(card.code);
-    }
-  });
-
-  const shuffledDeck = shuffleArray(rawDeck);
-
-  // Distribui 2 novas cartas para cada participante
-  const handInserts = [];
-  players.forEach((player) => {
-    const card1 = shuffledDeck.pop();
-    const card2 = shuffledDeck.pop();
-
-    handInserts.push({
-      room_id: roomId,
-      player_id: player.id,
-      card_code: card1,
-      slot_index: 1,
-      is_revealed: false,
+  } else {
+    state.logs.unshift({
+      text: `✨ ${player.nickname} invocou [${card.name}] (${className}) honestamente!`,
+      type: 'action',
     });
+  }
 
-    handInserts.push({
-      room_id: roomId,
-      player_id: player.id,
-      card_code: card2,
-      slot_index: 2,
-      is_revealed: false,
+  // Abre janela de reação de 6 segundos ("🚨 MENTIRA!")
+  state.pendingReaction = {
+    type: 'summon_hero',
+    initiatorId: playerId,
+    initiatorName: player.nickname,
+    heroEntry,
+    isBluff,
+    declaredClass: heroEntry.declaredClass,
+    actualClass: card.heroClass,
+    card,
+    timeRemaining: 6,
+  };
+
+  // Se for honesto, rola 2d6 imediatamente para tentar ativar a habilidade gratuitamente
+  if (!isBluff && card.rollTarget) {
+    executeHeroAbilityRoll(state, player, heroEntry, true);
+  }
+
+  const win = checkVictory(player);
+  if (win) {
+    state.status = 'finished';
+    state.winner = win.winner;
+    soundManager.playVictoryFanfare();
+    state.logs.unshift({ text: win.reason, type: 'slay' });
+  }
+
+  return true;
+};
+
+// Executa a rolagem de habilidade de um herói
+export const executeHeroAbilityRoll = (state, player, heroEntry, isFreeSummonRoll = false) => {
+  const roll = roll2d6();
+  soundManager.playDiceRoll();
+
+  let bonus = 0;
+  if (player.leader && player.leader.id === 'leader_bard') bonus += 1;
+  if (heroEntry.equippedItem) bonus += heroEntry.equippedItem.bonus || 1;
+
+  const total = roll.total + bonus;
+  state.diceState = {
+    die1: roll.die1,
+    die2: roll.die2,
+    total,
+    isRolling: true,
+    purpose: 'hero_ability',
+    targetName: heroEntry.card.name,
+    modifiers: bonus,
+  };
+
+  setTimeout(() => {
+    state.diceState.isRolling = false;
+  }, 700);
+
+  const needed = heroEntry.card.rollTarget || 7;
+  const success = total >= needed;
+
+  if (success) {
+    heroEntry.abilityUsedThisTurn = true;
+    soundManager.playMonsterSlay();
+    applyHeroEffect(state, player, heroEntry.card);
+    state.logs.unshift({
+      text: `🎲 ${player.nickname} rolou ${roll.die1}+${roll.die2}${bonus > 0 ? ` (+${bonus})` : ''} = ${total} (Meta ${needed}+) e ATIVOU [${heroEntry.card.abilityName}]!`,
+      type: 'dice',
     });
-  });
-
-  await supabase.from('player_hands').insert(handInserts);
-
-  // Restaura vida e runas de todos
-  for (let i = 0; i < players.length; i++) {
-    const startRunes = (playerCount === 2 && i === 0) ? 1 : 2;
-    await supabase
-      .from('players')
-      .update({ is_alive: true, runes: startRunes })
-      .eq('id', players[i].id);
-  }
-
-  const firstPlayer = players[0];
-
-  await supabase
-    .from('rooms')
-    .update({
-      status: 'playing',
-      turn_phase: 'action',
-      current_turn_player_id: firstPlayer.id,
-      deck: shuffledDeck,
-      pending_action: null,
-      winner_player_id: null,
-    })
-    .eq('id', roomId);
-
-  await addGameLog(
-    roomId,
-    'Santuário',
-    'SYSTEM',
-    `⚔️ A REVANCHE ARCANA COMEÇOU! Todos os heróis retornaram à vida com novos grimórios. Vez de ${firstPlayer.nickname}.`
-  );
-};
-
-// Rotação de Turno
-export const advanceTurn = async (roomId) => {
-  // Busca todos os jogadores da sala ordenados por assento
-  const { data: players } = await supabase
-    .from('players')
-    .select('*')
-    .eq('room_id', roomId)
-    .order('seat_order', { ascending: true });
-
-  const { data: room } = await supabase
-    .from('rooms')
-    .select('current_turn_player_id')
-    .eq('id', roomId)
-    .single();
-
-  if (!players || !room) return;
-
-  const alivePlayers = players.filter((p) => p.is_alive);
-
-  // Verifica condição de vitória
-  if (alivePlayers.length <= 1) {
-    await checkVictoryCondition(roomId);
-    return;
-  }
-
-  const currentIndex = alivePlayers.findIndex((p) => p.id === room.current_turn_player_id);
-  const nextIndex = (currentIndex + 1) % alivePlayers.length;
-  const nextPlayer = alivePlayers[nextIndex];
-
-  await supabase
-    .from('rooms')
-    .update({
-      turn_phase: 'action',
-      current_turn_player_id: nextPlayer.id,
-      pending_action: null,
-    })
-    .eq('id', roomId);
-
-  await addGameLog(roomId, nextPlayer.nickname, 'SYSTEM', `Novo turno! Agora é a vez de ${nextPlayer.nickname}.`);
-};
-
-// Checagem de Vitória e Eliminação
-export const checkPlayerElimination = async (roomId, playerId) => {
-  const { data: hands } = await supabase
-    .from('player_hands')
-    .select('*')
-    .eq('room_id', roomId)
-    .eq('player_id', playerId);
-
-  if (!hands || hands.length === 0) return;
-
-  const allRevealed = hands.every((h) => h.is_revealed);
-
-  if (allRevealed) {
-    const { data: player } = await supabase
-      .from('players')
-      .update({ is_alive: false })
-      .eq('id', playerId)
-      .select()
-      .single();
-
-    if (player) {
-      await addGameLog(roomId, player.nickname, 'ELIMINATED', `💀 ${player.nickname} teve todas as suas identidades reveladas e foi eliminado do duelo!`);
-    }
-
-    await checkVictoryCondition(roomId);
+  } else {
+    state.logs.unshift({
+      text: `🎲 ${player.nickname} rolou ${total} (precisava de ${needed}+). Habilidade de [${heroEntry.card.name}] não ativou.`,
+      type: 'action',
+    });
   }
 };
 
-export const checkVictoryCondition = async (roomId) => {
-  const { data: alivePlayers } = await supabase
-    .from('players')
-    .select('*')
-    .eq('room_id', roomId)
-    .eq('is_alive', true);
-
-  if (alivePlayers && alivePlayers.length === 1) {
-    const winner = alivePlayers[0];
-    
-    // Registra vitória e derrotas no ranking
-    try {
-      const { data: allRoomPlayers } = await supabase
-        .from('players')
-        .select('nickname')
-        .eq('room_id', roomId);
-
-      const allNicks = allRoomPlayers ? allRoomPlayers.map((p) => p.nickname) : [];
-      await trackMatchOutcome(winner.nickname, allNicks);
-    } catch (err) {
-      console.warn('Erro ao atualizar ranking de fim de partida:', err);
-    }
-
-    await supabase
-      .from('rooms')
-      .update({
-        status: 'finished',
-        winner_player_id: winner.id,
-        turn_phase: 'resolve',
-        pending_action: null,
-      })
-      .eq('id', roomId);
-
-    await addGameLog(roomId, winner.nickname, 'SYSTEM', `🏆 GRANDE VITÓRIA! ${winner.nickname} conquistou a Aliança Arcana e se tornou a lenda suprema!`);
-  }
-};
-
-// EXECUÇÃO DE AÇÕES DO TURNO
-
-// 1. Coletar 1 Runa (Ação Livre, sem contestação, sem bloqueio)
-export const actCollect1 = async (roomId, actor) => {
-  // Incrementa 1 runa
-  await supabase
-    .from('players')
-    .update({ runes: actor.runes + 1 })
-    .eq('id', actor.id);
-
-  await addGameLog(roomId, actor.nickname, 'ACTION', `${actor.nickname} coletou 1 Runa de poder do altar (+1 Runa).`);
-  await advanceTurn(roomId);
-};
-
-// 2. Golpe Épico (Custa 7 Runas, sem blefe, sem bloqueio, destrói 1 carta do alvo)
-export const actEpicStrike = async (roomId, actor, target) => {
-  if (actor.runes < 7) {
-    throw new Error('Você precisa de 7 Runas para desferir um Golpe Épico.');
+// Aplica o efeito ativado do herói
+const applyHeroEffect = (state, player, card) => {
+  // Passiva do Mago Elminster (se total >= 10, compra 1 carta)
+  if (player.leader?.id === 'leader_wizard' && state.diceState.total >= 10) {
+    if (state.mainDeck.length > 0) player.hand.push(state.mainDeck.pop());
   }
 
-  // Deduz 7 runas do ator
-  await supabase
-    .from('players')
-    .update({ runes: actor.runes - 7 })
-    .eq('id', actor.id);
-
-  // Registra combate no ranking
-  trackCombatStrike(actor.nickname, target.nickname, 'EPIC_STRIKE');
-
-  await addGameLog(roomId, actor.nickname, 'ACTION', `⚡ ${actor.nickname} conjurou um GOLPE ÉPICO contra ${target.nickname}!`);
-
-  // Alvo perde 1 carta oculta
-  await forcePlayerLoseCard(roomId, target.id);
-  await advanceTurn(roomId);
-};
-
-// 3. Declarar Ação de Personagem ou Ação Bloqueável
-export const declareAction = async (roomId, actor, actionCode, target = null) => {
-  // Validação: Se tiver 10+ runas, Golpe Épico é OBRIGATÓRIO
-  if (actor.runes >= 10 && actionCode !== 'EPIC_STRIKE') {
-    throw new Error('Você acumulou 10 ou mais Runas! Pela lei arcana, você DEVE desferir um Golpe Épico.');
-  }
-
-  // Validação Demigod (Assassinar) requer 3 runas
-  if (actionCode === 'ASSASSINATE' && actor.runes < 3) {
-    throw new Error('A Fúria Olímpica requer ao menos 3 Runas de oferenda.');
-  }
-
-  let actionLabel = '';
-  let claimedCard = null;
-  let nextPhase = 'challenge_window';
-
-  switch (actionCode) {
-    case 'GUILD_AID':
-      actionLabel = 'Ajuda da Guilda (+2 Runas)';
-      claimedCard = null; // Ação livre, não contestável, mas bloqueável por Demigod
-      nextPhase = 'block_window';
+  switch (card.id) {
+    case 'hero_w1': // Invocador de Faíscas (+2 cartas)
+      for (let i = 0; i < 2; i++) {
+        if (state.mainDeck.length > 0) player.hand.push(state.mainDeck.pop());
+      }
       break;
 
-    case 'ARCHMAGE_EXCHANGE':
-      actionLabel = 'Transfiguração (Trocar 2 cartas do deck)';
-      claimedCard = 'ARCHMAGE';
+    case 'hero_w4': // Arquivista Místico (+1 PA extra)
+      state.currentPA += 1;
       break;
 
-    case 'STEAL':
-      actionLabel = `Manto Élfico (Roubar 2 Runas de ${target?.nickname})`;
-      claimedCard = 'RINGBEARER';
+    case 'hero_t1': // Batedor de Carteiras (rouba 1 carta aleatória de um rival)
+      const rivalWithCards = state.players.find((p) => p.id !== player.id && p.hand.length > 0);
+      if (rivalWithCards) {
+        const stolen = rivalWithCards.hand.pop();
+        player.hand.push(stolen);
+        state.logs.unshift({
+          text: `💰 ${player.nickname} roubou 1 carta da mão de ${rivalWithCards.nickname}!`,
+          type: 'action',
+        });
+      }
       break;
 
-    case 'ASSASSINATE':
-      actionLabel = `Fúria Olímpica (Eliminar carta de ${target?.nickname})`;
-      claimedCard = 'DEMIGOD';
-      // Deduz antecipadamente as 3 runas
-      await supabase
-        .from('players')
-        .update({ runes: actor.runes - 3 })
-        .eq('id', actor.id);
+    case 'hero_f1': // Capitão de Armas (Destrói 1 herói rival)
+      const rivalWithParty = state.players.find((p) => p.id !== player.id && p.party.length > 0);
+      if (rivalWithParty) {
+        // Proteção do Baluarte de Ferro não se aplica a combate se for habilidade de herói, mas protege contra spells
+        const deadHero = rivalWithParty.party.pop();
+        state.discardPile.push(deadHero.card);
+        soundManager.playCardDestroy();
+        state.logs.unshift({
+          text: `⚔️ ${player.nickname} destruiu o herói [${deadHero.card.name}] de ${rivalWithParty.nickname}!`,
+          type: 'action',
+        });
+      }
       break;
 
-    case 'TAX_TREASURY':
-      actionLabel = 'Pilhagem de Smaug (+3 Runas)';
-      claimedCard = 'DRAGONSLAYER';
-      break;
-
-    case 'PERPETUAL_VOW':
-      actionLabel = 'Voto Perpétuo (+2 Runas puras)';
-      claimedCard = 'RELIC_KEEPER';
-      break;
-
-    case 'DIVINATION':
-      actionLabel = `Profecia Arcana (Espiar carta de ${target?.nickname} e +1 Runa)`;
-      claimedCard = 'ORACLE';
-      break;
-
-    case 'DARK_DRAIN':
-      actionLabel = 'Drenagem Sombria (Extorquir 1 Runa de cada adversário)';
-      claimedCard = 'DARK_LORD';
+    case 'hero_r4': // Ranger Vento-Leste (Compra 3 cartas)
+      for (let i = 0; i < 3; i++) {
+        if (state.mainDeck.length > 0) player.hand.push(state.mainDeck.pop());
+      }
       break;
 
     default:
-      throw new Error(`Ação desconhecida: ${actionCode}`);
+      break;
   }
+};
 
-  // Rastreia carta declarada no perfil
-  if (claimedCard) {
-    trackCardUsage(actor.nickname, claimedCard);
-  }
+// AÇÃO: Ativar Habilidade de Herói na Mesa (1 PA)
+export const actActivateHeroAbility = (state, playerId, heroInstanceId) => {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || state.currentPA < 1) return false;
 
-  const pendingAction = {
-    actor_id: actor.id,
-    actor_name: actor.nickname,
-    action_code: actionCode,
-    action_label: actionLabel,
-    target_id: target?.id || null,
-    target_name: target?.nickname || null,
-    claimed_card: claimedCard,
-    blocked_by_id: null,
-    blocked_by_name: null,
-    block_card: null,
-    accepted_by: [actor.id], // lista de jogadores que aceitaram
+  const heroEntry = player.party.find((h) => h.instanceId === heroInstanceId);
+  if (!heroEntry || heroEntry.abilityUsedThisTurn) return false;
+
+  state.currentPA -= 1;
+  soundManager.playPACrystal();
+
+  executeHeroAbilityRoll(state, player, heroEntry, false);
+  return true;
+};
+
+// AÇÃO: Atacar Monstro (2 PA)
+export const actAttackMonster = (state, playerId, monsterId) => {
+  const player = state.players.find((p) => p.id === playerId);
+  const monster = state.activeMonsters.find((m) => m.id === monsterId);
+
+  if (!player || !monster) return false;
+
+  // Custo: 2 PA (ou 1 PA se abateu o Dragão Esqueleto)
+  const hasSkeletonDragon = player.slainMonsters.some((m) => m.id === 'monster_2');
+  const paCost = hasSkeletonDragon ? 1 : 2;
+
+  if (state.currentPA < paCost) return false;
+  if (!canAttackMonster(player, monster)) return false;
+
+  state.currentPA -= paCost;
+  soundManager.playPACrystal();
+
+  const roll = roll2d6();
+  soundManager.playDiceRoll();
+
+  let bonus = 0;
+  // Bônus da Valquíria (+1 em ataques)
+  if (player.leader && player.leader.id === 'leader_fighter') bonus += 1;
+
+  const total = roll.total + bonus;
+  state.diceState = {
+    die1: roll.die1,
+    die2: roll.die2,
+    total,
+    isRolling: true,
+    purpose: 'monster_attack',
+    targetName: monster.name,
+    modifiers: bonus,
   };
 
-  await supabase
-    .from('rooms')
-    .update({
-      turn_phase: nextPhase,
-      pending_action: pendingAction,
-    })
-    .eq('id', roomId);
+  setTimeout(() => {
+    state.diceState.isRolling = false;
+  }, 700);
 
-  await addGameLog(
-    roomId,
-    actor.nickname,
-    'ACTION',
-    `${actor.nickname} declarou: "${actionLabel}" ${claimedCard ? `alegando ser [${getCardByCode(claimedCard).name}]!` : ''}`
-  );
+  // SUCESSO: Abateu o Monstro!
+  if (total >= monster.rollTarget) {
+    soundManager.playMonsterSlay();
+    state.activeMonsters = state.activeMonsters.filter((m) => m.id !== monster.id);
+    player.slainMonsters.push(monster);
+
+    // Repõe Monstro no Covil se houver no baralho
+    if (state.monsterDeck.length > 0) {
+      state.activeMonsters.push(state.monsterDeck.pop());
+    }
+
+    state.logs.unshift({
+      text: `🏆 GLÓRIA! ${player.nickname} rolou ${roll.die1}+${roll.die2}${bonus > 0 ? ` (+${bonus})` : ''} = ${total} e ABATEU [${monster.name}]! (${monster.rewardDescription})`,
+      type: 'slay',
+    });
+
+    const win = checkVictory(player);
+    if (win) {
+      state.status = 'finished';
+      state.winner = win.winner;
+      soundManager.playVictoryFanfare();
+      state.logs.unshift({ text: win.reason, type: 'slay' });
+    }
+    return true;
+  }
+
+  // FALHA: Sofre a penalidade!
+  if (total <= monster.failThreshold) {
+    soundManager.playCardDestroy();
+    applyMonsterFailurePenalty(state, player, monster);
+    state.logs.unshift({
+      text: `💀 FALHA CRÍTICA! ${player.nickname} rolou ${total} contra [${monster.name}] (limiar ${monster.failThreshold}-). Penalidade sofrida!`,
+      type: 'bluff',
+    });
+    return false;
+  }
+
+  // Empate / Falha sem penalidade
+  state.logs.unshift({
+    text: `🛡️ O ataque de ${player.nickname} contra [${monster.name}] não atingiu a meta de ${monster.rollTarget}+ (rolou ${total}), mas escapou ileso.`,
+    type: 'action',
+  });
+
+  return false;
 };
 
-// RESOLUÇÃO DE CONTESTAÇÃO ("MENTIRA!")
-export const callBluff = async (roomId, challenger) => {
-  const { data: room } = await supabase.from('rooms').select('*').eq('id', roomId).single();
-  if (!room || !room.pending_action) return;
+// Aplica penalidade de falha do monstro
+const applyMonsterFailurePenalty = (state, player, monster) => {
+  // Golem de Obsidiana concede imunidade a sacrifícios forçados
+  const hasObsidianGolem = player.slainMonsters.some((m) => m.id === 'monster_3');
 
-  const { actor_id, actor_name, claimed_card, blocked_by_id, blocked_by_name, block_card } = room.pending_action;
-
-  // Está contestando um BLOQUEIO ou a AÇÃO original?
-  const isContestingBlock = Boolean(blocked_by_id && block_card);
-  const targetId = isContestingBlock ? blocked_by_id : actor_id;
-  const targetName = isContestingBlock ? blocked_by_name : actor_name;
-  const verifiedCard = isContestingBlock ? block_card : claimed_card;
-
-  // Busca as cartas ocultas do acusado
-  const { data: hands } = await supabase
-    .from('player_hands')
-    .select('*')
-    .eq('room_id', roomId)
-    .eq('player_id', targetId)
-    .eq('is_revealed', false);
-
-  const hasCard = hands && hands.some((h) => h.card_code === verifiedCard);
-
-  await addGameLog(
-    roomId,
-    challenger.nickname,
-    'BLUFF_CALL',
-    `⚔️ ${challenger.nickname} gritou: "MENTIRA!" desafiando a declaração de [${getCardByCode(verifiedCard).name}] por ${targetName}!`
-  );
-
-  if (!hasCard) {
-    // ERA BLEFE! O acusado mentiu!
-    trackBluffCall(targetName, challenger.nickname, true);
-
-    await addGameLog(
-      roomId,
-      targetName,
-      'BLUFF_CALL',
-      `❌ PEGO NO BLEFE! ${targetName} não possuía a carta! ${targetName} perde uma identidade arcana!`
-    );
-
-    // O mentiroso perde uma carta
-    await forcePlayerLoseCard(roomId, targetId);
-
-    if (isContestingBlock) {
-      // Bloqueio frustrado! A ação original agora pode ser executada
-      await resolveAction(roomId);
-    } else {
-      // Ação original cancelada! Turno passa.
-      await advanceTurn(roomId);
+  if (monster.penaltyDescription.includes('Sacrifique') && !hasObsidianGolem) {
+    if (player.party.length > 0) {
+      const sacrificed = player.party.pop();
+      state.discardPile.push(sacrificed.card);
     }
+  } else if (monster.penaltyDescription.includes('Descarte')) {
+    player.hand.splice(0, 2);
+  }
+};
+
+// CONTESTAÇÃO DE BLEFE: "🚨 MENTIRA!"
+export const actChallengeBluff = (state, challengerId) => {
+  const reaction = state.pendingReaction;
+  if (!reaction || reaction.type !== 'summon_hero') return false;
+
+  const liarPlayer = state.players.find((p) => p.id === reaction.initiatorId);
+  const challenger = state.players.find((p) => p.id === challengerId);
+  if (!liarPlayer || !challenger) return false;
+
+  soundManager.playBluffAlert();
+
+  const isActuallyLying = reaction.actualClass !== reaction.declaredClass;
+
+  if (isActuallyLying) {
+    // BLEFE DESMASCARADO!
+    // A carta é destruída e o mentiroso perde 1 PA
+    soundManager.playCardDestroy();
+    liarPlayer.party = liarPlayer.party.filter((h) => h.instanceId !== reaction.heroEntry.instanceId);
+    state.discardPile.push(reaction.card);
+
+    if (state.currentPA > 0) state.currentPA -= 1;
+
+    // Passiva do Ladino Velka: rouba 1 carta do mentiroso
+    if (challenger.leader?.id === 'leader_thief' && liarPlayer.hand.length > 0) {
+      challenger.hand.push(liarPlayer.hand.pop());
+    }
+
+    state.logs.unshift({
+      text: `🚨 BLEFE DESMASCARADO! ${challenger.nickname} gritou "MENTIRA!" e provou que ${liarPlayer.nickname} não possuía [${CLASSES[reaction.declaredClass]?.name}]. A carta foi destruída!`,
+      type: 'bluff',
+    });
   } else {
-    // ERA VERDADE! O acusado falava a verdade!
-    trackBluffCall(targetName, challenger.nickname, false);
+    // ERA VERDADE! O acusador foi imprudente!
+    reaction.heroEntry.isBluff = false;
+    reaction.heroEntry.isRevealed = true;
 
-    await addGameLog(
-      roomId,
-      targetName,
-      'BLUFF_CALL',
-      `✨ ERA VERDADE! ${targetName} revelou com orgulho [${getCardByCode(verifiedCard).name}]! ${challenger.nickname} falhou no julgamento e perde 1 identidade!`
-    );
-
-    // O contestador perde uma carta
-    await forcePlayerLoseCard(roomId, challenger.id);
-
-    // O acusado coloca a carta comprovada de volta no deck e compra uma nova
-    await replaceProvenCard(roomId, targetId, verifiedCard);
-
-    if (isContestingBlock) {
-      // O bloqueio foi mantido e validado! A ação foi cancelada pelo bloqueio bem-sucedido.
-      await addGameLog(roomId, blocked_by_name, 'BLOCK', `🛡️ O bloqueio foi bem-sucedido. A ação foi frustrada.`);
-      await advanceTurn(roomId);
-    } else {
-      // A ação original segue em frente!
-      // Se a ação for bloqueável, abre janela de bloqueio. Se não, resolve!
-      const blockableActions = ['GUILD_AID', 'STEAL', 'ASSASSINATE', 'DIVINATION'];
-      if (blockableActions.includes(room.pending_action.action_code)) {
-        await supabase
-          .from('rooms')
-          .update({ turn_phase: 'block_window' })
-          .eq('id', roomId);
-      } else {
-        await resolveAction(roomId);
-      }
+    // Acusador deve descartar 2 cartas (ou sacrificar 1 herói)
+    if (challenger.hand.length >= 2) {
+      challenger.hand.splice(0, 2);
+    } else if (challenger.party.length > 0) {
+      const sacrificed = challenger.party.pop();
+      state.discardPile.push(sacrificed.card);
     }
+
+    state.logs.unshift({
+      text: `✨ ERA A MAIS PURA VERDADE! ${liarPlayer.nickname} realmente possuía um [${CLASSES[reaction.declaredClass]?.name}]. ${challenger.nickname} falhou na acusação e foi penalizado!`,
+      type: 'action',
+    });
   }
+
+  state.pendingReaction = null;
+  return true;
 };
 
-// Jogador aceita a ação / não contesta
-export const acceptAction = async (roomId, player) => {
-  const { data: room } = await supabase.from('rooms').select('*').eq('id', roomId).single();
-  if (!room || !room.pending_action) return;
+// Joga uma carta modificadora da mão para alterar a rolagem ativa
+export const actPlayModifier = (state, playerId, cardInstanceId, choosePlus = true) => {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player) return false;
 
-  const currentAccepted = room.pending_action.accepted_by || [];
-  if (!currentAccepted.includes(player.id)) {
-    currentAccepted.push(player.id);
-  }
+  const cardIdx = player.hand.findIndex((c) => c.instanceId === cardInstanceId && c.type === 'modifier');
+  if (cardIdx === -1) return false;
 
-  // Busca jogadores vivos
-  const { data: alivePlayers } = await supabase
-    .from('players')
-    .select('id')
-    .eq('room_id', roomId)
-    .eq('is_alive', true);
+  const modCard = player.hand.splice(cardIdx, 1)[0];
+  state.discardPile.push(modCard);
 
-  // Se todos os jogadores vivos aceitaram
-  const allAccepted = alivePlayers.every((p) => currentAccepted.includes(p.id));
+  const bonusVal = Math.abs(modCard.bonus || 2) * (choosePlus ? 1 : -1);
+  state.diceState.modifiers += bonusVal;
+  state.diceState.total += bonusVal;
 
-  if (allAccepted) {
-    if (room.turn_phase === 'challenge_window') {
-      const isBlockContest = Boolean(room.pending_action.blocked_by_id);
-      if (isBlockContest) {
-        // Bloqueio aceito por todos! Ação original cancelada com sucesso.
-        await addGameLog(
-          roomId,
-          room.pending_action.blocked_by_name,
-          'BLOCK',
-          `🛡️ O bloqueio de ${room.pending_action.blocked_by_name} foi aceito por todos. A ação foi frustrada.`
-        );
-        await advanceTurn(roomId);
-        return;
-      }
+  soundManager.playPACrystal();
 
-      // Ação não foi contestada. Se puder ser bloqueada, vai para block_window; senão resolve
-      const blockableActions = ['GUILD_AID', 'STEAL', 'ASSASSINATE', 'DIVINATION'];
-      if (blockableActions.includes(room.pending_action.action_code)) {
-        await supabase
-          .from('rooms')
-          .update({
-            turn_phase: 'block_window',
-            pending_action: { ...room.pending_action, accepted_by: [] },
-          })
-          .eq('id', roomId);
-      } else {
-        await resolveAction(roomId);
-      }
-    } else if (room.turn_phase === 'block_window') {
-      // Ninguém bloqueou. Resolve a ação original!
-      await resolveAction(roomId);
-    }
-  } else {
-    // Atualiza lista de aceitos
-    await supabase
-      .from('rooms')
-      .update({
-        pending_action: { ...room.pending_action, accepted_by: currentAccepted },
-      })
-      .eq('id', roomId);
-  }
+  state.logs.unshift({
+    text: `🎲 ${player.nickname} jogou [${modCard.name}] (${bonusVal >= 0 ? `+${bonusVal}` : bonusVal}) alterando o total dos dados para ${state.diceState.total}!`,
+    type: 'dice',
+  });
+
+  return true;
 };
 
-// DECLARAÇÃO DE BLOQUEIO
-export const declareBlock = async (roomId, blocker, blockCard) => {
-  const { data: room } = await supabase.from('rooms').select('*').eq('id', roomId).single();
-  if (!room || !room.pending_action) return;
+// AÇÃO: Jogar Magia (1 PA)
+export const actPlaySpell = (state, playerId, handIndex, targetRivalId = null) => {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || state.currentPA < 1 || !player.hand[handIndex]) return false;
 
-  // Rastreia bloqueio e uso da carta no perfil
-  trackBlock(blocker.nickname);
-  trackCardUsage(blocker.nickname, blockCard);
+  const spellCard = player.hand.splice(handIndex, 1)[0];
+  state.currentPA -= 1;
+  soundManager.playPACrystal();
 
-  const updatedAction = {
-    ...room.pending_action,
-    blocked_by_id: blocker.id,
-    blocked_by_name: blocker.nickname,
-    block_card: blockCard,
-    accepted_by: [blocker.id],
-  };
+  state.discardPile.push(spellCard);
 
-  await supabase
-    .from('rooms')
-    .update({
-      turn_phase: 'challenge_window', // Nova janela de contestação para o bloqueio
-      pending_action: updatedAction,
-    })
-    .eq('id', roomId);
-
-  await addGameLog(
-    roomId,
-    blocker.nickname,
-    'BLOCK',
-    `🛡️ ${blocker.nickname} interpôs um BLOQUEIO alegando possuir [${getCardByCode(blockCard).name}]!`
-  );
-};
-
-// RESOLUÇÃO FINAL DA AÇÃO
-export const resolveAction = async (roomId) => {
-  const { data: room } = await supabase.from('rooms').select('*').eq('id', roomId).single();
-  if (!room || !room.pending_action) return;
-
-  const { actor_id, actor_name, action_code, target_id, target_name } = room.pending_action;
-
-  // Busca dados dos jogadores envolvidos
-  const { data: actor } = await supabase.from('players').select('*').eq('id', actor_id).single();
-  let target = null;
-  if (target_id) {
-    const { data: t } = await supabase.from('players').select('*').eq('id', target_id).single();
-    target = t;
-  }
-
-  switch (action_code) {
-    case 'GUILD_AID': {
-      await supabase
-        .from('players')
-        .update({ runes: actor.runes + 2 })
-        .eq('id', actor.id);
-      await addGameLog(roomId, actor_name, 'ACTION', `💰 ${actor_name} recebeu +2 Runas da Ajuda da Guilda.`);
-      await advanceTurn(roomId);
-      break;
-    }
-
-    case 'DRAGONSLAYER':
-    case 'TAX_TREASURY': {
-      await supabase
-        .from('players')
-        .update({ runes: actor.runes + 3 })
-        .eq('id', actor.id);
-      await addGameLog(roomId, actor_name, 'ACTION', `🐉 ${actor_name} pilhou o tesouro de Smaug (+3 Runas)!`);
-      await advanceTurn(roomId);
-      break;
-    }
-
-    case 'RELIC_KEEPER':
-    case 'PERPETUAL_VOW': {
-      await supabase
-        .from('players')
-        .update({ runes: actor.runes + 2 })
-        .eq('id', actor.id);
-      await addGameLog(roomId, actor_name, 'ACTION', `✨ ${actor_name} completou o Voto Perpétuo (+2 Runas puras)!`);
-      await advanceTurn(roomId);
-      break;
-    }
-
-    case 'RINGBEARER':
-    case 'STEAL': {
-      if (target) {
-        trackCombatStrike(actor_name, target_name, 'STEAL');
-        const stolenAmount = Math.min(2, Math.max(0, target.runes));
-        await supabase
-          .from('players')
-          .update({ runes: target.runes - stolenAmount })
-          .eq('id', target.id);
-        await supabase
-          .from('players')
-          .update({ runes: actor.runes + stolenAmount })
-          .eq('id', actor.id);
-        await addGameLog(
-          roomId,
-          actor_name,
-          'ACTION',
-          `💍 ${actor_name} usou o Manto Élfico e roubou ${stolenAmount} Runas de ${target_name}!`
-        );
-      }
-      await advanceTurn(roomId);
-      break;
-    }
-
-    case 'DEMIGOD':
-    case 'ASSASSINATE': {
-      if (target) {
-        trackCombatStrike(actor_name, target_name, 'ASSASSINATE');
-        await addGameLog(
-          roomId,
-          actor_name,
-          'ACTION',
-          `⚡ O raio da Fúria Olímpica de ${actor_name} atingiu ${target_name}!`
-        );
-        await forcePlayerLoseCard(roomId, target.id);
-      }
-      await advanceTurn(roomId);
-      break;
-    }
-
-    case 'DARK_LORD':
-    case 'DARK_DRAIN': {
-      // Drenagem Sombria: drena 1 runa de cada outro jogador vivo na mesa
-      const { data: otherPlayers } = await supabase
-        .from('players')
-        .select('*')
-        .eq('room_id', roomId)
-        .eq('is_alive', true)
-        .neq('id', actor.id);
-
-      let totalDrained = 0;
-      if (otherPlayers && otherPlayers.length > 0) {
-        for (const op of otherPlayers) {
-          if (op.runes > 0) {
-            await supabase
-              .from('players')
-              .update({ runes: op.runes - 1 })
-              .eq('id', op.id);
-            totalDrained += 1;
-          }
+  switch (spellCard.id) {
+    case 'spell_1': // Raio Arcano: Destrói 1 herói rival
+      const rival = state.players.find((p) => p.id === targetRivalId) || state.players.find((p) => p.id !== player.id && p.party.length > 0);
+      if (rival && rival.party.length > 0) {
+        if (rival.leader?.id === 'leader_guardian') {
+          state.logs.unshift({
+            text: `🛡️ O [Baluarte de Ferro] de ${rival.nickname} impediu a destruição de seus heróis pela magia!`,
+            type: 'action',
+          });
+        } else {
+          const dead = rival.party.pop();
+          state.discardPile.push(dead.card);
+          soundManager.playCardDestroy();
+          state.logs.unshift({
+            text: `⚡ [${spellCard.name}] de ${player.nickname} fulminou [${dead.card.name}] da Party de ${rival.nickname}!`,
+            type: 'action',
+          });
         }
       }
-
-      await supabase
-        .from('players')
-        .update({ runes: actor.runes + totalDrained })
-        .eq('id', actor.id);
-
-      await addGameLog(
-        roomId,
-        actor_name,
-        'ACTION',
-        `👁️ ${actor_name} conjurou a Drenagem Sombria e extorquiu ${totalDrained} Runas dos outros jogadores!`
-      );
-      await advanceTurn(roomId);
       break;
-    }
 
-    case 'ORACLE':
-    case 'DIVINATION': {
-      if (target) {
-        // Ator ganha 1 runa
-        await supabase
-          .from('players')
-          .update({ runes: actor.runes + 1 })
-          .eq('id', actor.id);
-
-        // Busca 1 carta oculta do alvo
-        const { data: targetCards } = await supabase
-          .from('player_hands')
-          .select('*')
-          .eq('room_id', roomId)
-          .eq('player_id', target.id)
-          .eq('is_revealed', false);
-
-        if (targetCards && targetCards.length > 0) {
-          const spiedCard = targetCards[Math.floor(Math.random() * targetCards.length)];
-          // Salva no pending_action a carta espiada apenas para leitura do ator
-          await supabase
-            .from('rooms')
-            .update({
-              pending_action: {
-                ...room.pending_action,
-                spied_card: spiedCard.card_code,
-              },
-            })
-            .eq('id', roomId);
-
-          await addGameLog(
-            roomId,
-            actor_name,
-            'ACTION',
-            `🔮 ${actor_name} contemplou as névoas da profecia e vislumbrou a alma de ${target_name} (+1 Runa).`
-          );
+    case 'spell_2': // Pilhagem das Sombras: rouba 2 cartas
+      const victim = state.players.find((p) => p.id !== player.id && p.hand.length > 0);
+      if (victim) {
+        for (let i = 0; i < 2; i++) {
+          if (victim.hand.length > 0) player.hand.push(victim.hand.pop());
         }
-      }
-      // Não passa de imediato para o ator poder ver no modal e clicar em "Concluir Visão"
-      break;
-    }
-
-    case 'ARCHMAGE':
-    case 'ARCHMAGE_EXCHANGE': {
-      // Compra 2 cartas do deck
-      const deck = Array.isArray(room.deck) ? [...room.deck] : [];
-      if (deck.length >= 2) {
-        const drawn1 = deck.pop();
-        const drawn2 = deck.pop();
-
-        await supabase
-          .from('rooms')
-          .update({
-            deck,
-            pending_action: {
-              ...room.pending_action,
-              exchange_drawn: [drawn1, drawn2],
-            },
-          })
-          .eq('id', roomId);
-
-        await addGameLog(
-          roomId,
-          actor_name,
-          'ACTION',
-          `🧙‍♂️ ${actor_name} canalizou a Transfiguração e invocou novos conhecimentos do grimório.`
-        );
-      } else {
-        await addGameLog(roomId, actor_name, 'ACTION', `O grimório não possui cartas suficientes para transfiguração.`);
-        await advanceTurn(roomId);
+        state.logs.unshift({
+          text: `🖐️ ${player.nickname} usou [${spellCard.name}] e pilhou 2 cartas da mão de ${victim.nickname}!`,
+          type: 'action',
+        });
       }
       break;
-    }
+
+    case 'spell_3': // Poção da Fortuna: compra 3 cartas
+      for (let i = 0; i < 3; i++) {
+        if (state.mainDeck.length > 0) player.hand.push(state.mainDeck.pop());
+      }
+      state.logs.unshift({
+        text: `🧪 ${player.nickname} bebeu [${spellCard.name}] e comprou 3 cartas!`,
+        type: 'action',
+      });
+      break;
+
+    case 'spell_4': // Vórtice do Caos: todos descartam 1 e compra 2
+      state.players.forEach((p) => {
+        if (p.id !== player.id && p.hand.length > 0) p.hand.pop();
+      });
+      for (let i = 0; i < 2; i++) {
+        if (state.mainDeck.length > 0) player.hand.push(state.mainDeck.pop());
+      }
+      state.logs.unshift({
+        text: `🌀 [${spellCard.name}] forçou todos os rivais a descartar e ${player.nickname} comprou 2 cartas!`,
+        type: 'action',
+      });
+      break;
 
     default:
-      await advanceTurn(roomId);
       break;
   }
+
+  return true;
 };
 
-// Finaliza a troca de cartas do Arquimago
-export const completeArchmageExchange = async (roomId, playerId, keptCards, returnedCards) => {
-  const { data: room } = await supabase.from('rooms').select('*').eq('id', roomId).single();
-  if (!room) return;
+// AÇÃO: Equipar Item em um Herói (1 PA)
+export const actEquipItem = (state, playerId, handIndex, heroInstanceId) => {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || state.currentPA < 1 || !player.hand[handIndex]) return false;
 
-  const currentDeck = Array.isArray(room.deck) ? [...room.deck] : [];
-  // Adiciona as devolvidas ao fundo do deck
-  const newDeck = [...returnedCards, ...currentDeck];
+  const heroEntry = player.party.find((h) => h.instanceId === heroInstanceId);
+  if (!heroEntry) return false;
 
-  // Atualiza as cartas ocultas do jogador
-  const { data: hands } = await supabase
-    .from('player_hands')
-    .select('*')
-    .eq('room_id', roomId)
-    .eq('player_id', playerId)
-    .eq('is_revealed', false)
-    .order('slot_index', { ascending: true });
+  const itemCard = player.hand.splice(handIndex, 1)[0];
+  state.currentPA -= 1;
+  soundManager.playPACrystal();
 
-  if (hands) {
-    for (let i = 0; i < hands.length; i++) {
-      if (keptCards[i]) {
-        await supabase
-          .from('player_hands')
-          .update({ card_code: keptCards[i] })
-          .eq('id', hands[i].id);
-      }
+  heroEntry.equippedItem = itemCard;
+
+  state.logs.unshift({
+    text: `🗡️ ${player.nickname} equipou [${itemCard.name}] (+${itemCard.bonus || 1}) em [${heroEntry.card.name}]!`,
+    type: 'action',
+  });
+
+  return true;
+};
+
+// AÇÃO: Renovar Mão - Descarta tudo e compra 5 (3 PA)
+export const actDiscardAndDraw5 = (state, playerId) => {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || state.currentPA < 3) return false;
+
+  state.currentPA = 0;
+  soundManager.playPACrystal();
+
+  state.discardPile.push(...player.hand);
+  player.hand = [];
+
+  for (let i = 0; i < 5; i++) {
+    if (state.mainDeck.length === 0 && state.discardPile.length > 0) {
+      state.mainDeck = shuffle([...state.discardPile]);
+      state.discardPile = [];
+    }
+    if (state.mainDeck.length > 0) {
+      player.hand.push(state.mainDeck.pop());
     }
   }
 
-  await supabase
-    .from('rooms')
-    .update({
-      deck: newDeck,
-      pending_action: null,
-    })
-    .eq('id', roomId);
+  state.logs.unshift({
+    text: `🔄 ${player.nickname} gastou todos os 3 PA, descartou a mão e comprou 5 novas cartas!`,
+    type: 'action',
+  });
 
-  await advanceTurn(roomId);
+  return true;
 };
 
-// Faz um jogador perder 1 carta oculta
-export const forcePlayerLoseCard = async (roomId, playerId, chosenHandId = null) => {
-  const { data: hands } = await supabase
-    .from('player_hands')
-    .select('*')
-    .eq('room_id', roomId)
-    .eq('player_id', playerId)
-    .eq('is_revealed', false);
+// PASSAR TURNO
+export const actPassTurn = (state) => {
+  if (!state || state.status !== 'playing') return;
 
-  if (!hands || hands.length === 0) return;
+  state.turnIndex = (state.turnIndex + 1) % state.players.length;
+  const nextPlayer = state.players[state.turnIndex];
+  state.turnPlayerId = nextPlayer.id;
 
-  // Se passou o id da carta escolhida ou se só resta 1
-  let targetHand = null;
-  if (chosenHandId) {
-    targetHand = hands.find((h) => h.id === chosenHandId);
-  }
-  if (!targetHand) {
-    targetHand = hands[0];
+  // Passiva do Titã da Tempestade: 4 PA por turno!
+  const hasTitan = nextPlayer.slainMonsters.some((m) => m.id === 'monster_9');
+  state.maxPA = hasTitan ? 4 : 3;
+  state.currentPA = state.maxPA;
+
+  // Passiva da Quimera Arcana: compra 1 carta no início do turno
+  if (nextPlayer.slainMonsters.some((m) => m.id === 'monster_4') && state.mainDeck.length > 0) {
+    nextPlayer.hand.push(state.mainDeck.pop());
   }
 
-  await supabase
-    .from('player_hands')
-    .update({ is_revealed: true })
-    .eq('id', targetHand.id);
+  // Reseta usos de habilidade da Party
+  nextPlayer.party.forEach((h) => {
+    h.abilityUsedThisTurn = false;
+  });
 
-  const cardObj = getCardByCode(targetHand.card_code);
-  await addGameLog(
-    roomId,
-    'Destino',
-    'ACTION',
-    `💥 A identidade [${cardObj.name}] foi irrevogavelmente revelada!`
-  );
+  state.pendingReaction = null;
 
-  await checkPlayerElimination(roomId, playerId);
-};
-
-// Substitui carta comprovada do jogador verdadeiro com uma nova do baralho
-export const replaceProvenCard = async (roomId, playerId, cardCode) => {
-  const { data: room } = await supabase.from('rooms').select('deck').eq('id', roomId).single();
-  const deck = Array.isArray(room?.deck) ? [...room.deck] : [];
-
-  // Devolve a carta ao baralho e reembaralha
-  deck.push(cardCode);
-  const shuffledDeck = shuffleArray(deck);
-  const newCard = shuffledDeck.pop();
-
-  // Encontra o slot da carta comprovada
-  const { data: hand } = await supabase
-    .from('player_hands')
-    .select('*')
-    .eq('room_id', roomId)
-    .eq('player_id', playerId)
-    .eq('card_code', cardCode)
-    .eq('is_revealed', false)
-    .limit(1)
-    .single();
-
-  if (hand) {
-    await supabase
-      .from('player_hands')
-      .update({ card_code: newCard })
-      .eq('id', hand.id);
-  }
-
-  await supabase
-    .from('rooms')
-    .update({ deck: shuffledDeck })
-    .eq('id', roomId);
+  state.logs.unshift({
+    text: `🔔 Turno de ${nextPlayer.nickname} começou! (${state.currentPA} PA disponíveis).`,
+    type: 'action',
+  });
 };

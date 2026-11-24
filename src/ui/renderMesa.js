@@ -1,970 +1,572 @@
-import { getCardByCode, CARD_CATALOG } from '../engine/gameLogic.js';
+import { CLASSES, PARTY_LEADERS } from '../engine/gameCatalog.js';
+import { canAttackMonster, getPartyClasses } from '../engine/gameLogic.js';
 
 /**
- * Renderizador reativo da Mesa de Jogo das Crônicas da Aliança Arcana
+ * RENDERIZADOR 100% RESPONSIVO & MOBILE-FIRST
+ * Arquitetura em 5 Zonas (360px a Desktop) no estilo Taverna Caótica
  */
 
-// Gera ícone/avatar temático
-export const getAvatarIcon = (theme) => {
-  switch (theme) {
-    case 'mago': return '🧙‍♂️';
-    case 'guerreiro': return '⚔️';
-    case 'elfo': return '🧝';
-    case 'anão': return '⛏️';
-    case 'oraculo': return '🔮';
-    case 'semideus': return '⚡';
-    case 'ladrao': return '🗡️';
-    default: return '👑';
+// ZONA 1: BARRA DE RIVAIS COMPACTA (Topo)
+export const renderRivalsBarHTML = (players, myPlayerId, turnPlayerId) => {
+  const rivals = players.filter((p) => p.id !== myPlayerId);
+
+  if (rivals.length === 0) {
+    return `<div class="text-xs text-slate-400 italic py-1 text-center">Aguardando guerreiros adentrarem a taverna...</div>`;
   }
+
+  return `
+    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-1">
+      ${rivals
+        .map((rival) => {
+          const isTurn = rival.id === turnPlayerId;
+          const partyClasses = getPartyClasses(rival);
+          const leader = rival.leader;
+
+          return `
+            <button
+              type="button"
+              data-rival-id="${rival.id}"
+              class="btn-open-rival-drawer flex-shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition card-chunky ${
+                isTurn
+                  ? 'border-amber-400 bg-amber-500/20 shadow-tavern-glow ring-2 ring-amber-400/50'
+                  : 'border-slate-800 bg-slate-900/90 hover:border-slate-700'
+              }"
+            >
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center text-sm bg-slate-950 border border-slate-700">
+                ${leader?.avatar || '👑'}
+              </div>
+
+              <div class="text-left">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[11px] font-title font-bold text-slate-200 truncate max-w-[85px]">
+                    ${rival.nickname}
+                  </span>
+                  ${isTurn ? `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>` : ''}
+                </div>
+
+                <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                  <span class="text-amber-400 font-bold">🏆 ${rival.slainMonsters.length}/3</span>
+                  <span class="text-cyan-400">🎴 ${rival.hand.length}</span>
+                  <div class="flex items-center -space-x-1">
+                    ${partyClasses
+                      .map((c) => `<span class="text-[9px] drop-shadow">${CLASSES[c]?.icon || '✦'}</span>`)
+                      .join('')}
+                  </div>
+                </div>
+              </div>
+            </button>
+          `;
+        })
+        .join('')}
+    </div>
+  `;
 };
 
-// Renderiza a carta do jogador local
-export const renderLocalCardHTML = (hand, isMyTurn) => {
-  if (!hand) return '';
-  const card = getCardByCode(hand.card_code);
-
-  if (hand.is_revealed) {
-    return `
-      <div class="relative w-36 sm:w-44 h-56 sm:h-64 rounded-xl border border-red-500/50 bg-slate-900/90 p-3 flex flex-col justify-between shadow-lg grayscale filter opacity-70">
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <span class="bg-red-950/90 text-red-400 border border-red-500 text-[10px] sm:text-xs font-title font-bold px-2 py-1 rounded-md rotate-[-12deg] tracking-widest shadow-crimson-glow">
-            IDENTIDADE REVELADA
+// ZONA 2: O COVIL DOS MONSTROS & BARALHO (Meio-Superior)
+export const renderCovilHTML = (activeMonsters, humanPlayer, mainDeckCount, discardCount) => {
+  return `
+    <div class="w-full space-y-1.5">
+      <div class="flex items-center justify-between px-1">
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm">🔥</span>
+          <span class="font-title text-xs font-bold text-amber-400 uppercase tracking-wider">
+            O Covil dos Monstros
           </span>
         </div>
-        <div class="flex justify-between items-center text-xs text-slate-400">
-          <span class="truncate max-w-[80px]">${card.universe_ref}</span>
-          <span class="text-xl">${card.icon}</span>
-        </div>
-        <div class="my-auto text-center">
-          <div class="font-title text-sm sm:text-base font-bold text-slate-300 leading-tight">${card.name}</div>
-          <div class="text-[10px] sm:text-xs text-slate-500 mt-1">${card.active_ability_name}</div>
-        </div>
-        <div class="text-[9px] sm:text-[10px] text-slate-400 line-clamp-2 italic border-t border-slate-700/50 pt-1">
-          ${card.active_description}
-        </div>
-      </div>
-    `;
-  }
 
-  return `
-    <div 
-      class="group relative w-36 sm:w-44 h-56 sm:h-64 rounded-xl border-2 p-3 flex flex-col justify-between shadow-arcane-glow transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-gradient-to-b from-fantasy-surface to-slate-950"
-      style="border-color: ${card.faction_color}; box-shadow: 0 0 15px -3px ${card.faction_color}40;"
-      title="${card.name} - ${card.universe_ref}"
-    >
-      <div class="flex justify-between items-center">
-        <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/40 text-slate-300 border border-slate-700/50">
-          ${card.universe_ref}
-        </span>
-        <span class="text-2xl filter drop-shadow">${card.icon}</span>
-      </div>
-
-      <div class="my-auto text-center">
-        <div class="font-title text-sm sm:text-base font-bold text-amber-300 leading-tight drop-shadow-md">
-          ${card.name}
-        </div>
-        <div class="text-[10px] sm:text-xs font-medium text-purple-300 mt-1">
-          ⚡ ${card.active_ability_name}
-        </div>
-      </div>
-
-      <div class="space-y-1 bg-black/40 p-1.5 rounded-lg border border-slate-800 text-[9px] sm:text-[10px]">
-        <div class="text-slate-300 line-clamp-2">
-          <span class="text-amber-400 font-semibold">Ativa:</span> ${card.active_description}
-        </div>
-        ${card.block_ability_name !== 'Bloqueio' ? `
-          <div class="text-slate-400 line-clamp-2 border-t border-slate-800 pt-0.5">
-            <span class="text-cyan-400 font-semibold">Defesa:</span> ${card.block_description}
+        <div class="flex items-center gap-3 text-[10px] text-slate-400">
+          <div class="flex items-center gap-1 bg-slate-900/80 px-2 py-0.5 rounded-lg border border-slate-800">
+            <span>📜</span>
+            <span class="font-mono text-slate-200 font-bold">${mainDeckCount}</span>
+            <span>no Baralho</span>
           </div>
-        ` : ''}
+          <button id="btn-view-discard" class="flex items-center gap-1 bg-slate-900/80 hover:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-800 transition">
+            <span>🗑️</span>
+            <span class="font-mono text-slate-300">${discardCount}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid dos 3 Monstros Ativos -->
+      <div class="grid grid-cols-3 gap-2">
+        ${activeMonsters
+          .map((monster) => {
+            if (!monster) return '';
+            const attackable = canAttackMonster(humanPlayer, monster);
+
+            return `
+              <div
+                data-monster-id="${monster.id}"
+                class="btn-inspect-monster group relative p-2 rounded-xl border-2 transition card-chunky cursor-pointer flex flex-col justify-between h-[105px] sm:h-[120px] ${
+                  attackable
+                    ? 'border-emerald-400 bg-emerald-950/30 shadow-attackable-glow monster-attackable'
+                    : 'border-slate-800 bg-slate-950/90 hover:border-slate-700'
+                }"
+              >
+                ${
+                  attackable
+                    ? `
+                  <div class="absolute -top-2 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-emerald-500 text-slate-950 font-title text-[8px] font-black uppercase tracking-wider shadow-sm animate-pulse whitespace-nowrap">
+                    ⚔️ ATACÁVEL
+                  </div>
+                `
+                    : ''
+                }
+
+                <div class="flex items-start justify-between">
+                  <span class="text-lg filter drop-shadow">${monster.icon}</span>
+                  <div class="flex items-center gap-0.5">
+                    ${monster.requiredClasses
+                      .map((rc) => `<span class="text-[10px]" title="${CLASSES[rc]?.name}">${CLASSES[rc]?.icon}</span>`)
+                      .join('')}
+                  </div>
+                </div>
+
+                <div class="my-auto text-center">
+                  <div class="font-title text-[11px] sm:text-xs font-bold text-amber-200 leading-tight truncate">
+                    ${monster.name}
+                  </div>
+                  <div class="text-[9px] text-slate-400 truncate mt-0.5">${monster.title}</div>
+                </div>
+
+                <div class="flex items-center justify-between text-[9px] border-t border-slate-800/80 pt-1">
+                  <span class="text-emerald-400 font-bold">🎯 ${monster.rollTarget}+</span>
+                  <span class="text-red-400 font-medium">💀 ${monster.failThreshold}-</span>
+                </div>
+              </div>
+            `;
+          })
+          .join('')}
       </div>
     </div>
   `;
 };
 
-// Renderiza a carta dos oponentes (Verso seguro se oculta, Frente se revelada)
-export const renderOpponentCardHTML = (hand) => {
-  if (!hand) return '';
+// ZONA 3: ARENA DE DADOS 2D6 & LOG (Centro)
+export const renderDiceArenaHTML = (diceState, latestLog) => {
+  const isRolling = diceState.isRolling;
+  const total = diceState.total;
+  const die1 = diceState.die1;
+  const die2 = diceState.die2;
+  const mod = diceState.modifiers || 0;
 
-  if (hand.is_revealed) {
-    const card = getCardByCode(hand.card_code);
-    return `
-      <div class="relative w-16 sm:w-20 h-24 sm:h-28 rounded-lg border border-red-500/40 bg-slate-900/90 p-1 flex flex-col justify-between text-center grayscale filter opacity-70">
-        <span class="text-xs text-red-400">💀</span>
-        <div class="font-title text-[9px] sm:text-[10px] font-bold text-slate-300 leading-tight truncate">
-          ${card.name}
-        </div>
-        <span class="text-[8px] text-red-400 uppercase tracking-tighter">Revelada</span>
-      </div>
-    `;
-  }
-
-  // VERSO DA CARTA (Estilo Grimório Selado com Runa Mística - NUNCA expor o nome da carta)
   return `
-    <div class="relative w-16 sm:w-20 h-24 sm:h-28 rounded-lg border-2 border-amber-600/40 bg-gradient-to-br from-amber-950/80 via-slate-900 to-purple-950/80 p-1 flex flex-col items-center justify-center shadow-md select-none">
-      <div class="w-full h-full border border-amber-500/20 rounded flex flex-col items-center justify-center bg-black/30">
-        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-amber-400/50 flex items-center justify-center bg-amber-900/40 text-amber-300 text-xs sm:text-sm animate-pulse-slow">
-          ✦
+    <div class="w-full flex flex-col items-center justify-center gap-1.5 py-1">
+      <div class="flex items-center justify-center gap-3">
+        <!-- Dado 1 -->
+        <div class="w-10 h-10 sm:w-12 sm:h-12 dice-face text-base sm:text-lg ${isRolling ? 'animate-dice-roll' : ''}">
+          ${die1}
         </div>
-        <span class="text-[8px] sm:text-[9px] font-title font-semibold text-amber-400/80 mt-1 uppercase tracking-widest">
-          SELADA
-        </span>
+
+        <span class="text-slate-400 text-xs font-black">+</span>
+
+        <!-- Dado 2 -->
+        <div class="w-10 h-10 sm:w-12 sm:h-12 dice-face text-base sm:text-lg ${isRolling ? 'animate-dice-roll' : ''}">
+          ${die2}
+        </div>
+
+        ${
+          mod !== 0
+            ? `
+          <span class="text-slate-400 text-xs font-black">=</span>
+          <div class="px-2 py-1 rounded-lg bg-amber-500/20 border border-amber-400 text-amber-300 font-title font-black text-xs">
+            ${total} ${mod > 0 ? `(+${mod})` : `(${mod})`}
+          </div>
+        `
+            : `
+          <span class="text-slate-400 text-xs font-black">=</span>
+          <div class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-amber-300 font-title font-black text-xs sm:text-sm">
+            ${total}
+          </div>
+        `
+        }
+      </div>
+
+      <!-- 1-Line Action Toast / Narrador -->
+      <div class="w-full max-w-md mx-auto text-center px-2">
+        <div class="inline-block px-3 py-0.5 rounded-full bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 truncate max-w-full">
+          ${latestLog?.text || 'A Taverna está em silêncio. Faça sua jogada!'}
+        </div>
       </div>
     </div>
   `;
 };
 
-// Renderiza a lista de oponentes no topo da mesa
-export const renderOpponentsHTML = (
-  players,
-  hands,
-  currentTurnPlayerId,
-  myPlayerId,
-  isSelectingTarget = false,
-  selectingActionName = ''
-) => {
-  const opponents = players.filter((p) => p.id !== myPlayerId);
+// ZONA 4: SUA PARTY NA MESA (Meio-Inferior)
+export const renderPlayerPartyHTML = (player, isMyTurn, currentPA) => {
+  const leader = player.leader;
+  const party = player.party || [];
+  const partyClasses = getPartyClasses(player);
 
-  if (opponents.length === 0) {
-    return `
-      <div class="text-center py-6 text-slate-400 italic">
-        Aguardando outros guerreiros adentrarem a aliança...
+  return `
+    <div class="w-full space-y-1">
+      <div class="flex items-center justify-between px-1">
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm">🛡️</span>
+          <span class="font-title text-xs font-bold text-slate-200 uppercase tracking-wider">
+            Sua Party (${party.length + 1} Heróis • ${partyClasses.length}/6 Classes)
+          </span>
+        </div>
+
+        <!-- Troféus de Monstros Abatidos -->
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] text-slate-400">Troféus:</span>
+          ${
+            player.slainMonsters.length > 0
+              ? player.slainMonsters.map((m) => `<span class="text-xs" title="${m.name}">${m.icon}</span>`).join('')
+              : `<span class="text-[10px] text-slate-500 italic">Nenhum</span>`
+          }
+        </div>
       </div>
-    `;
-  }
 
-  return opponents
-    .map((opp) => {
-      const oppHands = hands.filter((h) => h.player_id === opp.id);
-      const isTurn = opp.id === currentTurnPlayerId;
-      const isAlive = opp.is_alive;
-      const isTargetable = isSelectingTarget && isAlive;
-
-      return `
-        <div 
-          data-target-player-id="${opp.id}"
-          class="opponent-slot relative flex flex-col items-center p-2.5 sm:p-3 rounded-2xl border transition-all ${
-            isTargetable
-              ? 'ring-4 ring-amber-400 border-amber-400 bg-amber-500/20 shadow-gold-glow animate-pulse cursor-pointer hover:scale-105'
-              : isTurn
-              ? 'border-amber-400 bg-amber-500/10 shadow-gold-glow animate-pulse-slow'
-              : isAlive
-              ? 'border-slate-800 bg-fantasy-surface/80'
-              : 'border-red-900/40 bg-black/60 opacity-50'
-          }"
+      <!-- Carrossel da Party (Líder + Heróis) -->
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-1">
+        <!-- 1. CARTA DO LÍDER DE GRUPO -->
+        <div
+          class="flex-shrink-0 w-24 sm:w-28 h-32 sm:h-36 rounded-xl border-2 p-2 flex flex-col justify-between card-chunky select-none bg-gradient-to-b from-slate-900 to-slate-950"
+          style="border-color: ${leader.color};"
         >
-          <!-- Balão de Fala / Emote do Oponente -->
-          <div id="speech-bubble-${opp.id}" class="speech-bubble hidden absolute -top-9 left-1/2 -translate-x-1/2 z-30 text-[11px] whitespace-nowrap shadow-md"></div>
-          
-          ${isTurn ? `
-            <div class="absolute -top-3 px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-title text-[10px] font-bold shadow tracking-wider uppercase">
-              Vez Atual
-            </div>
-          ` : ''}
-
-          ${isTargetable ? `
-            <div class="absolute -top-3 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-title text-[10px] font-extrabold shadow-gold-glow tracking-wider uppercase animate-bounce">
-              🎯 Alvo
-            </div>
-          ` : ''}
-
-          <!-- Header do Oponente -->
-          <div class="flex items-center gap-2 mb-2 w-full justify-between">
-            <div class="flex items-center gap-1.5 truncate">
-              <span class="text-lg">${getAvatarIcon(opp.avatar_theme)}</span>
-              <span class="font-title text-xs sm:text-sm font-bold text-slate-200 truncate ${!isAlive ? 'line-through text-red-400' : ''}">
-                ${opp.nickname}
-              </span>
-            </div>
-            
-            <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-              <span>💎</span>
-              <span>${opp.runes}</span>
-            </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-[8px] font-bold uppercase px-1 py-0.2 rounded bg-black/60 text-slate-200">
+              LÍDER
+            </span>
+            <span class="text-sm">${leader.avatar}</span>
           </div>
 
-          <!-- Cartas do Oponente -->
-          <div class="flex items-center gap-2">
-            ${oppHands.map((h) => renderOpponentCardHTML(h)).join('')}
+          <div class="text-center my-auto">
+            <div class="font-title text-[11px] font-bold text-amber-300 leading-tight truncate">
+              ${leader.name}
+            </div>
+            <div class="text-[9px] text-slate-400 mt-0.5 truncate">${leader.title}</div>
           </div>
 
-          ${!isAlive ? `
-            <div class="text-[10px] font-title font-bold text-red-500 mt-1 uppercase">
-              💀 Eliminado
-            </div>
-          ` : ''}
+          <div class="text-[8px] text-slate-300 line-clamp-2 italic border-t border-slate-800 pt-0.5">
+            ${leader.passiveDescription}
+          </div>
         </div>
-      `;
-    })
-    .join('');
+
+        <!-- 2. HERÓIS DA PARTY -->
+        ${party
+          .map((heroEntry) => {
+            const isBluff = heroEntry.isBluff;
+            const hero = heroEntry.card;
+            const displayClassKey = isBluff ? heroEntry.declaredClass : hero.heroClass;
+            const classObj = CLASSES[displayClassKey] || CLASSES.fighter;
+            const item = heroEntry.equippedItem;
+            const canUseAbility = isMyTurn && currentPA >= 1 && !heroEntry.abilityUsedThisTurn && hero.rollTarget;
+
+            if (isBluff) {
+              // CARTA EM MODO BLEFE (Face Oculta com Máscara Mística)
+              return `
+                <div
+                  data-hero-instance-id="${heroEntry.instanceId}"
+                  class="btn-inspect-party-hero group relative flex-shrink-0 w-24 sm:w-28 h-32 sm:h-36 rounded-xl border-2 border-pink-500/80 p-2 flex flex-col justify-between card-chunky cursor-pointer bg-gradient-to-b from-purple-950 via-slate-950 to-pink-950 shadow-bluff-glow"
+                >
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="px-1 py-0.2 rounded-full text-[8px] font-black uppercase text-pink-200 bg-pink-950/80 border border-pink-500/50">
+                      🎭 BLEFE
+                    </span>
+                    <span class="text-xs">${classObj.icon}</span>
+                  </div>
+
+                  <div class="my-auto text-center">
+                    <div class="w-8 h-8 mx-auto rounded-full bg-pink-950/60 border border-pink-500/60 flex items-center justify-center text-sm animate-pulse">
+                      🎭
+                    </div>
+                    <div class="font-title text-[10px] font-bold text-pink-300 mt-1 truncate">
+                      [${classObj.name}]
+                    </div>
+                    <div class="text-[8px] text-slate-400">Classe Declarada</div>
+                  </div>
+
+                  <div class="text-center text-[8px] text-slate-400 border-t border-pink-900/40 pt-0.5 italic">
+                    Identidade Oculta 🤫
+                  </div>
+                </div>
+              `;
+            }
+
+            // CARTA HONESTA FACE ABERTA
+            return `
+              <div
+                data-hero-instance-id="${heroEntry.instanceId}"
+                class="btn-inspect-party-hero group relative flex-shrink-0 w-24 sm:w-28 h-32 sm:h-36 rounded-xl border-2 p-2 flex flex-col justify-between card-chunky cursor-pointer bg-gradient-to-b from-slate-900 to-slate-950"
+                style="border-color: ${classObj.color};"
+              >
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-[8px] font-bold uppercase px-1 py-0.2 rounded bg-black/60 text-slate-200">
+                    ${classObj.name}
+                  </span>
+                  <span class="text-sm">${hero.icon}</span>
+                </div>
+
+                <div class="text-center my-auto">
+                  <div class="font-title text-[11px] font-bold text-slate-200 leading-tight truncate">
+                    ${hero.name}
+                  </div>
+                  <div class="text-[9px] text-amber-400 font-bold mt-0.5">
+                    🎲 ${hero.rollTarget}+
+                  </div>
+                </div>
+
+                <div class="space-y-0.5 border-t border-slate-800 pt-0.5">
+                  ${
+                    item
+                      ? `
+                    <div class="text-[8px] text-cyan-300 truncate font-semibold">
+                      🗡️ ${item.name} (+${item.bonus || 1})
+                    </div>
+                  `
+                      : ''
+                  }
+                  ${
+                    canUseAbility
+                      ? `
+                    <button
+                      type="button"
+                      data-activate-hero-id="${heroEntry.instanceId}"
+                      class="btn-activate-hero-ability w-full py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-title text-[8px] font-black uppercase tracking-wider transition"
+                    >
+                      ⚡ Ativar (1 PA)
+                    </button>
+                  `
+                      : `
+                    <div class="text-[8px] text-slate-400 truncate text-center">
+                      ${heroEntry.abilityUsedThisTurn ? '✓ Já Usado' : hero.abilityName}
+                    </div>
+                  `
+                  }
+                </div>
+              </div>
+            `;
+          })
+          .join('')}
+      </div>
+    </div>
+  `;
 };
 
-// Renderiza a barra de ações do jogador ativo
-export const renderActionBarHTML = (myPlayer, isMyTurn, turnPhase, pendingAction, players) => {
-  if (!myPlayer || !myPlayer.is_alive) {
-    return `
-      <div class="p-4 rounded-xl bg-red-950/30 border border-red-800/40 text-center text-red-400 text-sm">
-        💀 Você foi eliminado desta partida arcana. Acompanhe o desenrolar das crônicas!
+// ZONA 5: BASE FIXA (MÃO EM CARROSSEL & BARRA DO POLEGAR - THUMB ZONE)
+export const renderThumbZoneHTML = (player, isMyTurn, currentPA, maxPA) => {
+  const hand = player.hand || [];
+
+  return `
+    <div class="w-full space-y-1.5 pt-1 border-t border-slate-800/80 bg-tavern-wood/95">
+      <!-- Mão de Cartas em Carrossel Horizontal Suave (snap-x) -->
+      <div class="flex items-center gap-2 overflow-x-auto snap-x no-scrollbar px-2 py-1">
+        ${
+          hand.length === 0
+            ? `
+          <div class="w-full text-center py-4 text-xs text-slate-500 italic">
+            Sua mão está vazia. Toque em "Comprar (1 PA)" abaixo!
+          </div>
+        `
+            : hand
+                .map((card, idx) => {
+                  let badge = '';
+                  let borderColor = '#64748B';
+
+                  if (card.type === 'hero') {
+                    const c = CLASSES[card.heroClass] || CLASSES.fighter;
+                    borderColor = c.color;
+                    badge = `🎲 ${card.rollTarget}+`;
+                  } else if (card.type === 'spell') {
+                    borderColor = '#06B6D4';
+                    badge = 'MAGIA';
+                  } else if (card.type === 'item') {
+                    borderColor = '#94A3B8';
+                    badge = `ITEM (+${card.bonus || 1})`;
+                  } else if (card.type === 'modifier') {
+                    borderColor = '#F43F5E';
+                    badge = `MOD (${card.bonus >= 0 ? `+${card.bonus}` : card.bonus})`;
+                  }
+
+                  return `
+                    <button
+                      type="button"
+                      data-hand-index="${idx}"
+                      class="btn-select-hand-card flex-shrink-0 snap-start w-20 sm:w-24 h-28 sm:h-32 rounded-xl border-2 p-1.5 flex flex-col justify-between card-chunky transition transform active:scale-95 bg-gradient-to-b from-slate-900 to-slate-950 text-left"
+                      style="border-color: ${borderColor};"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs">${card.icon || '✦'}</span>
+                        <span class="text-[8px] font-black uppercase px-1 rounded bg-black/60 text-slate-300">
+                          ${badge}
+                        </span>
+                      </div>
+
+                      <div class="my-auto text-center">
+                        <div class="font-title text-[10px] sm:text-[11px] font-bold text-slate-100 leading-tight truncate">
+                          ${card.name}
+                        </div>
+                      </div>
+
+                      <div class="text-[8px] text-slate-400 text-center uppercase tracking-wider">
+                        Toque p/ Jogar
+                      </div>
+                    </button>
+                  `;
+                })
+                .join('')
+        }
       </div>
-    `;
-  }
 
-  if (turnPhase !== 'action' || !isMyTurn) {
-    return `
-      <div class="p-3 text-center text-slate-400 text-xs sm:text-sm italic">
-        Aguardando resolução dos arcanos...
+      <!-- Barra Inferior Fixa ao Alcance do Polegar -->
+      <div class="flex items-center justify-between gap-2 px-2 pb-1.5 pt-0.5">
+        <!-- Cristais de Ação (PA) -->
+        <div class="flex items-center gap-1.5 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-800">
+          <div class="flex items-center gap-1">
+            ${Array.from({ length: maxPA })
+              .map((_, i) => `<span class="pa-crystal ${i < currentPA ? '' : 'empty'}"></span>`)
+              .join('')}
+          </div>
+          <span class="font-title text-xs font-black text-cyan-400 ml-1">
+            ${currentPA}/${maxPA} PA
+          </span>
+        </div>
+
+        <!-- Botões de Ação do Polegar (Min. 48px Touch Target) -->
+        <div class="flex items-center gap-2">
+          <!-- Botão Comprar Carta (1 PA) -->
+          <button
+            id="btn-act-draw"
+            ${!isMyTurn || currentPA < 1 ? 'disabled' : ''}
+            class="min-h-[44px] px-3.5 py-2 rounded-xl border border-cyan-500/50 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 font-title text-xs font-bold uppercase tracking-wider transition card-chunky flex items-center gap-1.5 ${
+              !isMyTurn || currentPA < 1 ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'
+            }"
+          >
+            <span>🎴</span>
+            <span>Comprar (1 PA)</span>
+          </button>
+
+          <!-- Botão Passar Turno -->
+          <button
+            id="btn-act-pass"
+            ${!isMyTurn ? 'disabled' : ''}
+            class="min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider transition card-chunky shadow-tavern-glow ${
+              !isMyTurn ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'
+            }"
+          >
+            ${isMyTurn ? 'Passar Vez ➔' : 'Aguarde...'}
+          </button>
+        </div>
       </div>
-    `;
-  }
+    </div>
+  `;
+};
 
-  const runes = myPlayer.runes;
-  const mustEpicStrike = runes >= 10;
+// BANNER CENTRAL FLUTUANTE DE REAÇÃO / BLEFE ("🚨 MENTIRA!")
+export const renderReactionBannerHTML = (reaction, myPlayerId, myHand) => {
+  if (!reaction) return '';
 
+  const isMe = reaction.initiatorId === myPlayerId;
+  const isBluff = reaction.isBluff;
+  const declaredClass = CLASSES[reaction.declaredClass]?.name || reaction.declaredClass;
+
+  // Filtra cartas modificadoras na mão do jogador
+  const modifierCards = myHand.filter((c) => c.type === 'modifier');
+
+  return `
+    <div class="fixed inset-x-3 top-20 z-50 max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-purple-950 via-slate-950 to-pink-950 border-2 border-pink-500 shadow-bluff-glow text-center space-y-3 drawer-slide-up">
+      <div class="flex items-center justify-between border-b border-pink-500/40 pb-2">
+        <span class="font-title text-xs font-black uppercase text-pink-300 tracking-wider">
+          ⚔️ Janela de Reação & Blefe (${reaction.timeRemaining}s)
+        </span>
+        <span class="w-3 h-3 rounded-full bg-pink-500 animate-ping"></span>
+      </div>
+
+      <div class="text-xs sm:text-sm text-slate-200">
+        <span class="font-bold text-amber-300">${reaction.initiatorName}</span> baixou uma carta:
+        <div class="font-title text-sm sm:text-base font-black text-pink-300 mt-1">
+          ${isBluff ? `🎭 MODO BLEFE alegando ser [${declaredClass}]!` : `[${reaction.card.name}]`}
+        </div>
+      </div>
+
+      ${
+        !isMe
+          ? `
+        <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+          <!-- Botão Desafiar Blefe -->
+          <button
+            id="btn-challenge-bluff"
+            class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-title text-xs sm:text-sm font-black uppercase tracking-wider transition shadow-lg card-chunky active:scale-95 animate-pulse"
+          >
+            🚨 MENTIRA! (Desafiar)
+          </button>
+          
+          <button
+            id="btn-pass-reaction"
+            class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold uppercase transition"
+          >
+            ✓ Deixar Passar
+          </button>
+        </div>
+
+        <!-- Atalho de Modificadores de Dados -->
+        ${
+          modifierCards.length > 0
+            ? `
+          <div class="border-t border-slate-800 pt-2 space-y-1">
+            <span class="text-[10px] text-slate-400 font-semibold uppercase">Jogar Modificador da Mão:</span>
+            <div class="flex items-center justify-center gap-1.5 flex-wrap">
+              ${modifierCards
+                .map(
+                  (m) => `
+                <button
+                  type="button"
+                  data-mod-id="${m.instanceId}"
+                  class="btn-quick-modifier px-2.5 py-1 rounded-lg bg-rose-950/80 border border-rose-500/50 hover:bg-rose-900 text-rose-200 text-[10px] font-bold transition"
+                >
+                  ${m.name} (${m.bonus >= 0 ? `+${m.bonus}` : m.bonus})
+                </button>
+              `
+                )
+                .join('')}
+            </div>
+          </div>
+        `
+            : ''
+        }
+      `
+          : `
+        <div class="text-xs text-amber-400/80 italic py-1">
+          Aguardando a reação dos nobres da taverna à sua jogada...
+        </div>
+      `
+      }
+    </div>
+  `;
+};
+
+// MODAL DE SELEÇÃO DE CLASSE PARA BLEFE (6 Classes)
+export const renderBluffClassSelectorHTML = () => {
   return `
     <div class="space-y-3">
-      ${mustEpicStrike ? `
-        <div class="p-2.5 rounded-lg bg-amber-500/20 border border-amber-500 text-amber-300 text-xs sm:text-sm font-semibold text-center animate-pulse">
-          ⚡ Você possui 10 ou mais Runas! A lei do santuário exige um GOLPE ÉPICO.
-        </div>
-      ` : ''}
-
-      <!-- Ações Básicas e Livres -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        <button
-          id="btn-act-collect-1"
-          ${mustEpicStrike ? 'disabled' : ''}
-          class="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 hover:border-amber-400/50 text-left transition flex flex-col justify-between ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-        >
-          <div class="flex items-center justify-between">
-            <span class="font-title text-xs font-bold text-amber-300">Coletar 1 Runa</span>
-            <span class="text-sm">🪙</span>
-          </div>
-          <span class="text-[10px] text-slate-400 mt-1">Ação livre. +1 Runa sem contestação.</span>
-        </button>
-
-        <button
-          id="btn-act-guild-aid"
-          ${mustEpicStrike ? 'disabled' : ''}
-          class="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 hover:border-amber-400/50 text-left transition flex flex-col justify-between ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-        >
-          <div class="flex items-center justify-between">
-            <span class="font-title text-xs font-bold text-amber-300">Ajuda da Guilda</span>
-            <span class="text-sm">🤝</span>
-          </div>
-          <span class="text-[10px] text-slate-400 mt-1">+2 Runas (Bloqueável por Semideus).</span>
-        </button>
-
-        <button
-          id="btn-act-epic-strike"
-          ${runes < 7 ? 'disabled' : ''}
-          class="p-2.5 rounded-xl border border-red-500/50 bg-red-950/40 hover:bg-red-900/60 hover:border-red-400 text-left transition flex flex-col justify-between col-span-2 sm:col-span-1 ${runes < 7 ? 'opacity-40 cursor-not-allowed' : 'shadow-crimson-glow animate-pulse'}"
-        >
-          <div class="flex items-center justify-between">
-            <span class="font-title text-xs font-bold text-red-400">Golpe Épico (-7💎)</span>
-            <span class="text-sm">⚡</span>
-          </div>
-          <span class="text-[10px] text-red-300 mt-1">Destrói 1 carta do alvo. Sem blefe/bloqueio.</span>
-        </button>
-      </div>
-
-      <!-- Ações de Personagem (Permite Blefe!) -->
-      <div class="border-t border-slate-800 pt-2">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[11px] font-title font-semibold text-purple-300 uppercase tracking-wider">
-            Ações de Personagem (Você pode blefar!)
-          </span>
-          <span class="text-[10px] text-slate-400 italic">Blefe por sua conta e risco 🤫</span>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          <!-- Transfiguração (Arquimago) -->
-          <button
-            id="btn-act-archmage"
-            ${mustEpicStrike ? 'disabled' : ''}
-            class="p-2 rounded-lg border border-purple-500/30 bg-purple-950/30 hover:bg-purple-900/40 hover:border-purple-400 text-left transition ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-          >
-            <div class="flex items-center justify-between">
-              <span class="font-title text-xs font-bold text-purple-300">Transfiguração</span>
-              <span class="text-xs">🧙‍♂️</span>
-            </div>
-            <span class="text-[9px] text-slate-400">Troca 2 cartas do grimório.</span>
-          </button>
-
-          <!-- Manto Élfico (Portador do Anel) -->
-          <button
-            id="btn-act-steal"
-            ${mustEpicStrike ? 'disabled' : ''}
-            class="p-2 rounded-lg border border-amber-500/30 bg-amber-950/30 hover:bg-amber-900/40 hover:border-amber-400 text-left transition ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-          >
-            <div class="flex items-center justify-between">
-              <span class="font-title text-xs font-bold text-amber-300">Manto Élfico</span>
-              <span class="text-xs">💍</span>
-            </div>
-            <span class="text-[9px] text-slate-400">Rouba até 2 Runas de um alvo.</span>
-          </button>
-
-          <!-- Fúria Olímpica (Semideus) -->
-          <button
-            id="btn-act-assassinate"
-            ${mustEpicStrike || runes < 3 ? 'disabled' : ''}
-            class="p-2 rounded-lg border border-cyan-500/30 bg-cyan-950/30 hover:bg-cyan-900/40 hover:border-cyan-400 text-left transition ${mustEpicStrike || runes < 3 ? 'opacity-40 cursor-not-allowed' : ''}"
-          >
-            <div class="flex items-center justify-between">
-              <span class="font-title text-xs font-bold text-cyan-300">Fúria Olímpica (-3💎)</span>
-              <span class="text-xs">⚡</span>
-            </div>
-            <span class="text-[9px] text-slate-400">Elimina 1 carta de um alvo.</span>
-          </button>
-
-          <!-- Pilhagem de Smaug (Caçador de Dragões) -->
-          <button
-            id="btn-act-dragonslayer"
-            ${mustEpicStrike ? 'disabled' : ''}
-            class="p-2 rounded-lg border border-red-500/30 bg-red-950/30 hover:bg-red-900/40 hover:border-red-400 text-left transition ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-          >
-            <div class="flex items-center justify-between">
-              <span class="font-title text-xs font-bold text-red-300">Pilhagem (+3💎)</span>
-              <span class="text-xs">🐉</span>
-            </div>
-            <span class="text-[9px] text-slate-400">Saqueia +3 Runas do tesouro.</span>
-          </button>
-
-          <!-- Voto Perpétuo (Guardião das Relíquias) -->
-          <button
-            id="btn-act-relic"
-            ${mustEpicStrike ? 'disabled' : ''}
-            class="p-2 rounded-lg border border-emerald-500/30 bg-emerald-950/30 hover:bg-emerald-900/40 hover:border-emerald-400 text-left transition ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-          >
-            <div class="flex items-center justify-between">
-              <span class="font-title text-xs font-bold text-emerald-300">Voto Perpétuo</span>
-              <span class="text-xs">🛡️</span>
-            </div>
-            <span class="text-[9px] text-slate-400">+2 Runas puras (Inviolável).</span>
-          </button>
-
-          <!-- Profecia Arcana (Oráculo) -->
-          <button
-            id="btn-act-oracle"
-            ${mustEpicStrike ? 'disabled' : ''}
-            class="p-2 rounded-lg border border-pink-500/30 bg-pink-950/30 hover:bg-pink-900/40 hover:border-pink-400 text-left transition ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-          >
-            <div class="flex items-center justify-between">
-              <span class="font-title text-xs font-bold text-pink-300">Profecia Arcana</span>
-              <span class="text-xs">🔮</span>
-            </div>
-            <span class="text-[9px] text-slate-400">Espia 1 carta do alvo e +1 Runa.</span>
-          </button>
-
-          <!-- Drenagem Sombria (Lorde das Sombras) -->
-          <button
-            id="btn-act-darklord"
-            ${mustEpicStrike ? 'disabled' : ''}
-            class="p-2 rounded-lg border border-indigo-500/30 bg-indigo-950/30 hover:bg-indigo-900/40 hover:border-indigo-400 text-left transition col-span-2 sm:col-span-1 ${mustEpicStrike ? 'opacity-40 cursor-not-allowed' : ''}"
-          >
-            <div class="flex items-center justify-between">
-              <span class="font-title text-xs font-bold text-indigo-300">Drenagem Sombria</span>
-              <span class="text-xs">👁️</span>
-            </div>
-            <span class="text-[9px] text-slate-400">Extorque 1 Runa de cada adversário.</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-};
-
-// Renderiza o Altar Central e os Banners Interativos de Contestação / Bloqueio
-export const renderCenterAltarHTML = (room, myPlayerId, players) => {
-  if (!room) return '';
-
-  const { turn_phase, pending_action, deck, current_turn_player_id } = room;
-  const deckCount = Array.isArray(deck) ? deck.length : 0;
-  const isMyTurn = current_turn_player_id === myPlayerId;
-
-  // Se estiver na Janela de Contestação ("MENTIRA!")
-  if (turn_phase === 'challenge_window' && pending_action) {
-    const isBlockContest = Boolean(pending_action.blocked_by_id);
-    
-    // Quem fez a afirmação a ser contestada:
-    // Se for bloqueio, quem declarou foi o bloqueador (blocked_by_id)
-    // Se for ação, quem declarou foi o autor da ação (actor_id)
-    const claimantId = isBlockContest ? pending_action.blocked_by_id : pending_action.actor_id;
-    const isClaimant = claimantId === myPlayerId;
-
-    const subjectName = pending_action.blocked_by_name || pending_action.actor_name;
-    const claimedCardName = pending_action.block_card
-      ? getCardByCode(pending_action.block_card).name
-      : pending_action.claimed_card
-      ? getCardByCode(pending_action.claimed_card).name
-      : '';
-
-    return `
-      <div class="w-full max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-purple-950/90 to-slate-950 border-2 border-purple-500/60 shadow-arcane-glow text-center space-y-3">
-        
-        <!-- Header & Timer de Reação (10s) -->
-        <div class="flex items-center justify-between">
-          <div class="inline-block px-3 py-1 rounded-full bg-purple-900/60 text-purple-300 border border-purple-500/40 text-xs font-title font-semibold uppercase tracking-widest">
-            ⚔️ Janela de Contestação Arcana
-          </div>
-          <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
-            <span>⏱️</span>
-            <span id="reaction-timer-seconds">10s</span>
-          </div>
-        </div>
-
-        <!-- Barra de Progresso do Timer -->
-        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-          <div id="reaction-timer-bar" class="bg-gradient-to-r from-amber-400 to-red-500 h-full transition-all duration-1000" style="width: 100%;"></div>
-        </div>
-
-        <div class="text-sm sm:text-base text-slate-200">
-          <span class="font-bold text-amber-300">${subjectName}</span> declarou:
-          <div class="font-title text-base sm:text-lg font-bold text-purple-200 mt-1">
-            "${isBlockContest ? `Bloqueio com [${claimedCardName}]` : pending_action.action_label}"
-          </div>
-          ${claimedCardName ? `
-            <div class="text-xs text-slate-400 mt-0.5">
-              Alegando possuir a carta: <span class="text-amber-300 font-semibold">[${claimedCardName}]</span>
-            </div>
-          ` : ''}
-        </div>
-
-        ${isClaimant ? `
-          <div class="text-xs text-amber-400/80 italic py-2">
-            Aguardando a reação dos outros nobres arcanos à sua declaração...
-          </div>
-        ` : `
-          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <button
-              id="btn-call-bluff"
-              class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-title text-xs sm:text-sm font-bold shadow-crimson-glow tracking-wider uppercase transition transform hover:scale-105 active:scale-95"
-            >
-              ⚡ Contestar (Mentira!)
-            </button>
-            <button
-              id="btn-accept-action"
-              class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-title text-xs sm:text-sm font-bold tracking-wider uppercase transition"
-            >
-              ✓ Deixar Passar
-            </button>
-          </div>
-        `}
-      </div>
-    `;
-  }
-
-  // Se estiver na Janela de Bloqueio ("block_window")
-  if (turn_phase === 'block_window' && pending_action) {
-    const isActor = pending_action.actor_id === myPlayerId;
-    const isTarget = pending_action.target_id === myPlayerId;
-    const isGuildAid = pending_action.action_code === 'GUILD_AID';
-
-    // Determina quem pode bloquear e com quais cartas
-    let blockOptions = [];
-
-    if (isGuildAid) {
-      // Qualquer um pode bloquear com Semideus
-      blockOptions.push({ code: 'DEMIGOD', label: 'Bloquear com Semideus do Olimpo' });
-    } else if (pending_action.action_code === 'STEAL' && isTarget) {
-      blockOptions.push({ code: 'RINGBEARER', label: 'Bloquear com Portador do Anel' });
-      blockOptions.push({ code: 'ARCHMAGE', label: 'Bloquear com Arquimago Supremo' });
-      blockOptions.push({ code: 'DARK_LORD', label: 'Bloquear com Lorde das Sombras' });
-    } else if (pending_action.action_code === 'ASSASSINATE' && isTarget) {
-      blockOptions.push({ code: 'RELIC_KEEPER', label: 'Bloquear com Guardião das Relíquias' });
-    } else if (pending_action.action_code === 'DIVINATION' && isTarget) {
-      blockOptions.push({ code: 'ORACLE', label: 'Bloquear com Oráculo de Delfos' });
-      blockOptions.push({ code: 'ARCHMAGE', label: 'Bloquear com Arquimago Supremo' });
-      blockOptions.push({ code: 'DARK_LORD', label: 'Bloquear com Lorde das Sombras' });
-    }
-
-    const canIBlock = isGuildAid ? !isActor : isTarget;
-
-    return `
-      <div class="w-full max-w-lg mx-auto p-4 rounded-2xl bg-gradient-to-b from-cyan-950/90 to-slate-950 border-2 border-cyan-500/60 shadow-arcane-glow text-center space-y-3">
-        
-        <!-- Header & Timer de Reação (10s) -->
-        <div class="flex items-center justify-between">
-          <div class="inline-block px-3 py-1 rounded-full bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-xs font-title font-semibold uppercase tracking-widest">
-            🛡️ Janela de Bloqueio Defensivo
-          </div>
-          <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold">
-            <span>⏱️</span>
-            <span id="reaction-timer-seconds">10s</span>
-          </div>
-        </div>
-
-        <!-- Barra de Progresso do Timer -->
-        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-          <div id="reaction-timer-bar" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full transition-all duration-1000" style="width: 100%;"></div>
-        </div>
-
-        <div class="text-sm sm:text-base text-slate-200">
-          <span class="font-bold text-amber-300">${pending_action.actor_name}</span> declarou:
-          <div class="font-title text-base sm:text-lg font-bold text-cyan-200 mt-1">
-            "${pending_action.action_label}"
-          </div>
-        </div>
-
-        ${canIBlock && blockOptions.length > 0 ? `
-          <div class="space-y-2 pt-2">
-            <div class="text-xs text-cyan-300 font-semibold">
-              Deseja tentar bloquear esta ação? (Você pode blefar o bloqueio!)
-            </div>
-            <div class="flex flex-wrap items-center justify-center gap-2">
-              ${blockOptions.map((opt) => `
-                <button
-                  data-block-code="${opt.code}"
-                  class="btn-declare-block px-4 py-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-title text-xs font-bold tracking-wider uppercase transition shadow-md"
-                >
-                  🛡️ ${opt.label}
-                </button>
-              `).join('')}
-              <button
-                id="btn-pass-block"
-                class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-title text-xs font-bold tracking-wider uppercase transition"
-              >
-                ✓ Deixar Passar
-              </button>
-            </div>
-          </div>
-        ` : `
-          <div class="text-xs text-slate-400 italic py-2">
-            Aguardando declarações de defesa dos alvos...
-          </div>
-        `}
-      </div>
-    `;
-  }
-
-  // Altar Padrão em repouso
-  return `
-    <div class="flex flex-col items-center justify-center gap-2 py-2">
-      <!-- Indicador de Turno com Timer de 25s (se for a vez) -->
-      ${turn_phase === 'action' ? `
-        <div class="w-full max-w-xs mx-auto space-y-1">
-          <div class="flex justify-between items-center text-[10px] text-slate-400">
-            <span class="font-medium text-slate-300">${isMyTurn ? '⚡ SEU TURNO DE AÇÃO' : 'Aguardando ação...'}</span>
-            <span id="action-timer-seconds" class="font-mono text-emerald-400 font-bold">25s</span>
-          </div>
-          <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-            <div id="action-timer-bar" class="bg-gradient-to-r from-emerald-400 to-amber-400 h-full transition-all duration-1000" style="width: 100%;"></div>
-          </div>
-        </div>
-      ` : ''}
-
-      <!-- Indicador do Baralho / Grimório -->
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-amber-500/30 text-amber-300 text-xs shadow-inner">
-        <span class="text-lg">📜</span>
-        <div>
-          <div class="font-title font-bold text-slate-200">${deckCount} cartas</div>
-          <div class="text-[9px] text-slate-400">no Grimório</div>
-        </div>
-      </div>
-    </div>
-  `;
-};
-
-// Renderiza a gaveta retrátil "Cola Rápida"
-export const renderQuickCheatDrawerHTML = () => {
-  return CARD_CATALOG.map((card) => `
-    <div class="p-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 space-y-1.5 shadow-sm">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-1.5">
-          <span class="text-lg">${card.icon}</span>
-          <span class="font-title text-xs font-bold text-amber-300">${card.name}</span>
-        </div>
-        <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 uppercase">
-          ${card.universe_ref}
-        </span>
-      </div>
-      <div class="text-[11px] text-slate-300">
-        <span class="text-purple-400 font-semibold">⚡ Ação:</span> ${card.active_description}
-      </div>
-      <div class="text-[11px] text-slate-400 border-t border-slate-800 pt-1">
-        <span class="text-cyan-400 font-semibold">🛡️ Bloqueia:</span> ${card.block_description}
-      </div>
-    </div>
-  `).join('');
-};
-
-// Renderiza o Feed de Crônicas da Mesa (Game Logs)
-export const renderLogsHTML = (logs) => {
-  if (!logs || logs.length === 0) {
-    return `
-      <div class="text-center py-4 text-slate-500 text-xs italic">
-        O pergaminho das crônicas está em branco. A magia aguarda o primeiro ato.
-      </div>
-    `;
-  }
-
-  return logs
-    .map((log) => {
-      let badgeClass = 'bg-slate-800 text-slate-300 border-slate-700';
-      let icon = '📜';
-
-      switch (log.event_type) {
-        case 'ACTION':
-          badgeClass = 'bg-purple-950/80 text-purple-300 border-purple-500/40';
-          icon = '⚡';
-          break;
-        case 'BLUFF_CALL':
-          badgeClass = 'bg-red-950/80 text-red-300 border-red-500/40';
-          icon = '⚔️';
-          break;
-        case 'BLOCK':
-          badgeClass = 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40';
-          icon = '🛡️';
-          break;
-        case 'ELIMINATED':
-          badgeClass = 'bg-red-950 text-red-400 border-red-600';
-          icon = '💀';
-          break;
-        case 'SYSTEM':
-          badgeClass = 'bg-amber-950/80 text-amber-300 border-amber-500/40';
-          icon = '✨';
-          break;
-      }
-
-      const timeStr = log.created_at
-        ? new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        : '';
-
-      return `
-        <div class="flex items-start gap-2 text-xs p-2 rounded-lg bg-black/40 border border-slate-800/60 transition hover:bg-slate-900/60">
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-title font-bold border ${badgeClass} shrink-0">
-            ${icon} ${log.event_type}
-          </span>
-          <div class="flex-1 text-slate-300 leading-snug">
-            ${log.message}
-          </div>
-          <span class="text-[9px] text-slate-500 shrink-0 select-none">${timeStr}</span>
-        </div>
-      `;
-    })
-    .join('');
-};
-
-// Renderiza a Tabela do Grimório de Regras (Modal)
-export const renderRulesModalHTML = () => {
-  return `
-    <div class="space-y-4 text-xs sm:text-sm text-slate-300">
-      <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
-        💡 <strong>Lei dos Nobres:</strong> Você pode declarar QUALQUER ação de personagem mesmo que NÃO tenha a carta correspondente na mão. Porém, se alguém gritar <em>"MENTIRA!"</em> e você for pego blefando, perderá uma de suas identidades arcanas! O baralho possui <strong>35 cartas</strong> (7 arquétipos x 5 cópias cada) para 2 a 5 guerreiros.
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-amber-500/30 font-title text-amber-400 text-[11px] sm:text-xs">
-              <th class="py-2 px-2">Carta & Universo</th>
-              <th class="py-2 px-2">Ação Ativa (Pode Blefar)</th>
-              <th class="py-2 px-2">Bloqueio Defensivo</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-800">
-            ${CARD_CATALOG.map((card) => `
-              <tr class="hover:bg-slate-800/40 transition">
-                <td class="py-2.5 px-2 font-medium">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-lg">${card.icon}</span>
-                    <div>
-                      <div class="font-title text-xs font-bold" style="color: ${card.faction_color}">${card.name}</div>
-                      <div class="text-[10px] text-slate-400">${card.universe_ref} (5 cópias)</div>
-                    </div>
-                  </div>
-                </td>
-                <td class="py-2.5 px-2">
-                  <div class="font-semibold text-slate-200">${card.active_ability_name}</div>
-                  <div class="text-[10px] text-slate-400 mt-0.5">${card.active_description}</div>
-                </td>
-                <td class="py-2.5 px-2">
-                  <div class="font-semibold text-cyan-300">${card.block_ability_name}</div>
-                  <div class="text-[10px] text-slate-400 mt-0.5">${card.block_description}</div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Regras Especiais de Escala por Número de Jogadores (Estilo Coup) -->
-      <div class="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/40 space-y-2.5">
-        <div class="font-title font-bold text-purple-300 flex items-center gap-2 text-xs sm:text-sm">
-          <span>⚖️</span>
-          <span>Calibragem do Grimório por Quantidade de Jogadores (Estilo Coup)</span>
-        </div>
-        <p class="text-[11px] text-slate-300 leading-relaxed">
-          Para que o blefe e a dedução psicológica funcionem com precisão milimétrica, o tamanho do baralho é calibrado automaticamente com base no número de heróis na partida:
+      <div class="text-center">
+        <h4 class="font-title text-sm font-bold text-pink-300">
+          Escolha a Classe a ser Declarada no Blefe
+        </h4>
+        <p class="text-[11px] text-slate-400 mt-0.5">
+          Os outros guerreiros verão apenas a classe que você alegar!
         </p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
-          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
-            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
-              <span>⚔️ 2 Jogadores (Duelo Direto)</span>
-              <span class="font-mono text-purple-300">14 cartas</span>
-            </div>
-            <div class="text-slate-300">• <strong>2 cópias</strong> de cada arquétipo.</div>
-            <div class="text-slate-400 leading-tight">• <em>Blefe afiado:</em> Se você possui 2 cópias de uma carta, qualquer declaração dela pelo adversário é 100% blefe!</div>
-            <div class="text-amber-400 font-semibold">• O 1º jogador começa com 1 Runa e o 2º com 2 Runas (equilíbrio de iniciativa do Coup).</div>
-          </div>
-
-          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
-            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
-              <span>🛡️ 3 Jogadores (Triunvirato)</span>
-              <span class="font-mono text-purple-300">21 cartas</span>
-            </div>
-            <div class="text-slate-300">• <strong>3 cópias</strong> de cada arquétipo.</div>
-            <div class="text-slate-400 leading-tight">• Rotação dinâmica e contestações táticas.</div>
-            <div class="text-slate-400">• Todos os jogadores iniciam com 2 Runas.</div>
-          </div>
-
-          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
-            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
-              <span>👑 4 Jogadores (Quarteto Real)</span>
-              <span class="font-mono text-purple-300">28 cartas</span>
-            </div>
-            <div class="text-slate-300">• <strong>4 cópias</strong> de cada arquétipo.</div>
-            <div class="text-slate-400 leading-tight">• Blefes cruzados e bloqueios estratégicos entre guildas.</div>
-            <div class="text-slate-400">• Todos os jogadores iniciam com 2 Runas.</div>
-          </div>
-
-          <div class="p-2.5 rounded-xl bg-black/50 border border-amber-500/20 space-y-1">
-            <div class="font-title font-bold text-amber-300 flex items-center justify-between">
-              <span>🔥 5 Jogadores (Conclave Arcano)</span>
-              <span class="font-mono text-purple-300">35 cartas</span>
-            </div>
-            <div class="text-slate-300">• Baralho completo com <strong>5 cópias</strong> de cada arquétipo.</div>
-            <div class="text-slate-400 leading-tight">• Caos absoluto, alianças temporárias e alta tensão!</div>
-            <div class="text-slate-400">• Todos os jogadores iniciam com 2 Runas.</div>
-          </div>
-        </div>
       </div>
 
-      <div class="p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs space-y-1.5">
-        <div class="font-title font-bold text-amber-400">Ações Gerais (Sem Carta Necessária)</div>
-        <div>• <strong>Coletar 1 Runa:</strong> Ganha +1 Runa sem risco de contestação ou bloqueio.</div>
-        <div>• <strong>Ajuda da Guilda:</strong> Ganha +2 Runas. Não é blefe, mas o Semideus pode tentar bloquear.</div>
-        <div>• <strong>Golpe Épico (-7 Runas):</strong> Custa 7 Runas. Elimina imediatamente 1 carta de um adversário sem chance de blefe ou bloqueio. (Obrigatório se tiver 10+ Runas).</div>
-      </div>
-    </div>
-  `;
-};
-
-// Renderiza o Modal Completo do Ranking & Estatísticas
-export const renderRankingModalHTML = (leaderboard = [], myStats = null, activeTab = 'leaderboard') => {
-  const isLeaderboard = activeTab === 'leaderboard';
-
-  return `
-    <div class="space-y-4">
-      <!-- Navegação das Abas -->
-      <div class="flex items-center justify-center gap-2 border-b border-slate-800 pb-3">
-        <button
-          id="tab-btn-leaderboard"
-          class="px-4 py-2 rounded-xl font-title text-xs font-bold uppercase tracking-wider transition ${
-            isLeaderboard
-              ? 'bg-amber-500 text-slate-950 shadow-gold-glow'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-          }"
-        >
-          🏆 Classificação Geral
-        </button>
-        <button
-          id="tab-btn-profile"
-          class="px-4 py-2 rounded-xl font-title text-xs font-bold uppercase tracking-wider transition ${
-            !isLeaderboard
-              ? 'bg-purple-600 text-white shadow-arcane-glow'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-          }"
-        >
-          📜 Meu Perfil Arcano
-        </button>
-      </div>
-
-      <!-- CONTEÚDO: ABA 1 - CLASSIFICAÇÃO GERAL -->
-      ${isLeaderboard ? `
-        <div class="space-y-3">
-          <div class="flex items-center justify-between text-[11px] text-slate-400 px-1">
-            <span>Ordem dos Guerreiros mais Gloriosos da Aliança</span>
-            <span>Total: ${leaderboard.length} Heróis</span>
-          </div>
-
-          ${leaderboard.length === 0 ? `
-            <div class="text-center py-8 text-slate-500 text-xs italic">
-              Nenhum duelo foi registrado ainda neste santuário. Seja o primeiro a forjar sua lenda!
-            </div>
-          ` : `
-            <div class="overflow-x-auto max-h-[50vh] overflow-y-auto pr-1">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr class="border-b border-amber-500/30 font-title text-amber-400 text-[11px]">
-                    <th class="py-2 px-2 text-center">Rank</th>
-                    <th class="py-2 px-2">Guerreiro</th>
-                    <th class="py-2 px-2 text-center">Pontos</th>
-                    <th class="py-2 px-2 text-center">Vitórias</th>
-                    <th class="py-2 px-2 text-center">Derrotas</th>
-                    <th class="py-2 px-2 text-center">Win Rate</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-800">
-                  ${leaderboard.map((item, idx) => {
-                    let medal = `#${idx + 1}`;
-                    if (idx === 0) medal = '🥇 1º';
-                    else if (idx === 1) medal = '🥈 2º';
-                    else if (idx === 2) medal = '🥉 3º';
-
-                    const total = (item.wins || 0) + (item.losses || 0);
-                    const winrate = total > 0 ? ((item.wins / total) * 100).toFixed(0) + '%' : '0%';
-
-                    return `
-                      <tr class="hover:bg-slate-800/40 transition">
-                        <td class="py-2 px-2 text-center font-title font-bold text-amber-300">
-                          ${medal}
-                        </td>
-                        <td class="py-2 px-2 font-bold text-slate-200">
-                          ${item.nickname}
-                        </td>
-                        <td class="py-2 px-2 text-center font-mono font-bold text-purple-300">
-                          ${item.score || 0}
-                        </td>
-                        <td class="py-2 px-2 text-center text-emerald-400 font-semibold">
-                          ${item.wins || 0}
-                        </td>
-                        <td class="py-2 px-2 text-center text-red-400 font-semibold">
-                          ${item.losses || 0}
-                        </td>
-                        <td class="py-2 px-2 text-center text-amber-300 font-mono">
-                          ${winrate}
-                        </td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          `}
-        </div>
-      ` : `
-        <!-- CONTEÚDO: ABA 2 - MEU PERFIL ARCANO DETALHADO -->
-        <div class="space-y-4">
-          ${!myStats ? `
-            <div class="text-center py-8 text-slate-500 text-xs italic">
-              Selecione seu nome de guerreiro para carregar seu registro histórico.
-            </div>
-          ` : `
-            <!-- Resumo Superior -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center">
-                <span class="text-[10px] text-slate-400 uppercase font-semibold">Duelos</span>
-                <div class="font-title text-lg font-bold text-slate-200 mt-0.5">${myStats.games_played || 0}</div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center">
-                <span class="text-[10px] text-emerald-400 uppercase font-semibold">Vitórias</span>
-                <div class="font-title text-lg font-bold text-emerald-300 mt-0.5">${myStats.wins || 0}</div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-center">
-                <span class="text-[10px] text-red-400 uppercase font-semibold">Derrotas</span>
-                <div class="font-title text-lg font-bold text-red-300 mt-0.5">${myStats.losses || 0}</div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-center">
-                <span class="text-[10px] text-amber-400 uppercase font-semibold">Win Rate</span>
-                <div class="font-title text-lg font-bold text-amber-300 mt-0.5">
-                  ${(myStats.games_played || 0) > 0 ? (((myStats.wins || 0) / myStats.games_played) * 100).toFixed(1) + '%' : '0%'}
-                </div>
-              </div>
-            </div>
-
-            <!-- Golpes Aplicados vs Sofridos -->
-            <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
-              <div class="font-title text-xs font-bold text-amber-300 uppercase tracking-wider">
-                ⚔️ Registro de Golpes e Conflitos
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
-                  <span>⚡ Golpe Épico:</span>
-                  <div class="font-mono text-right">
-                    <span class="text-emerald-400 font-bold">${myStats.epic_strikes_dealt || 0} feitos</span> / 
-                    <span class="text-red-400 font-bold">${myStats.epic_strikes_received || 0} sofridos</span>
-                  </div>
-                </div>
-
-                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
-                  <span>🗡️ Fúria Olímpica:</span>
-                  <div class="font-mono text-right">
-                    <span class="text-emerald-400 font-bold">${myStats.assassinations_dealt || 0} feitos</span> / 
-                    <span class="text-red-400 font-bold">${myStats.assassinations_received || 0} sofridos</span>
-                  </div>
-                </div>
-
-                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
-                  <span>💍 Manto Élfico:</span>
-                  <div class="font-mono text-right">
-                    <span class="text-emerald-400 font-bold">${myStats.steals_dealt || 0} roubos</span> / 
-                    <span class="text-red-400 font-bold">${myStats.steals_received || 0} sofridos</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Blefes e Bloqueios -->
-            <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
-              <div class="font-title text-xs font-bold text-purple-300 uppercase tracking-wider">
-                🎭 Arte do Blefe e Proteção
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
-                  <span>⚔️ Blefes Desmascarados:</span>
-                  <span class="font-mono font-bold text-emerald-400">${myStats.bluffs_exposed || 0} vezes</span>
-                </div>
-                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
-                  <span>❌ Pego Mentindo:</span>
-                  <span class="font-mono font-bold text-red-400">${myStats.bluffs_caught || 0} vezes</span>
-                </div>
-                <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
-                  <span>🛡️ Bloqueios Bem-Sucedidos:</span>
-                  <span class="font-mono font-bold text-cyan-300">${myStats.blocks_performed || 0} vezes</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Cartas Mais Invocadas -->
-            <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
-              <div class="font-title text-xs font-bold text-amber-300 uppercase tracking-wider">
-                🃏 Cartas Mais Invocadas nas Partidas
-              </div>
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                ${CARD_CATALOG.map((card) => {
-                  const usedCount = (myStats.cards_used && myStats.cards_used[card.code]) || 0;
-                  return `
-                    <div class="p-2 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between text-xs">
-                      <div class="flex items-center gap-1.5 truncate">
-                        <span>${card.icon}</span>
-                        <span class="truncate text-[11px] text-slate-300">${card.name}</span>
-                      </div>
-                      <span class="font-mono font-bold text-amber-400 shrink-0 ml-1">${usedCount}x</span>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          `}
-        </div>
-      `}
-
-      <!-- AÇÃO ADMINISTRATIVA: ZERAR RANKING -->
-      <div class="border-t border-slate-800 pt-3 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span class="text-[10px] text-slate-500 italic">
-          Os registros de glória são atualizados automaticamente ao fim de cada contenda.
-        </span>
-        <button
-          id="btn-reset-ranking"
-          class="px-3 py-1.5 rounded-xl border border-red-500/40 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-title text-[10px] font-bold tracking-wider uppercase transition shadow-sm"
-          title="Zerar todos os registros do Santuário"
-        >
-          ⚠️ Zerar Ranking do Santuário
-        </button>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        ${Object.values(CLASSES)
+          .map(
+            (c) => `
+          <button
+            type="button"
+            data-bluff-class="${c.id}"
+            class="btn-choose-bluff-class p-2.5 rounded-xl border-2 flex flex-col items-center justify-center transition card-chunky bg-slate-900/90 hover:scale-105"
+            style="border-color: ${c.color};"
+          >
+            <span class="text-2xl">${c.icon}</span>
+            <span class="font-title text-xs font-bold text-slate-100 mt-1">${c.name}</span>
+          </button>
+        `
+          )
+          .join('')}
       </div>
     </div>
   `;

@@ -3,197 +3,153 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Crônicas da Aliança Arcana | Jogo de Cartas & Blefe</title>
+    <title>Heroes Love to Lie | Taverna Caótica & Caça a Monstros</title>
     
     <!-- Google Fonts: Cinzel & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
 
     <link rel="stylesheet" href="/src/style.css" />
   </head>
-  <body class="bg-fantasy-dark text-slate-100 min-h-screen flex flex-col font-inter">
+  <body class="bg-tavern-dark text-slate-100 flex flex-col font-inter h-[100dvh] max-h-[100dvh] overflow-hidden select-none">
 
-    <!-- CABEÇALHO GLOBAL -->
-    <header class="w-full border-b border-amber-500/20 bg-fantasy-surface/90 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-md">
+    <!-- CABEÇALHO GLOBAL COMPACTO -->
+    <header class="w-full flex-shrink-0 border-b border-tavern-woodBorder bg-tavern-wood/95 backdrop-blur-md px-3 py-2 flex items-center justify-between z-40 shadow-md">
       <div class="flex items-center gap-2">
-        <span class="text-2xl filter drop-shadow">✨</span>
+        <span class="text-xl filter drop-shadow">🎭</span>
         <div>
-          <h1 class="font-title text-sm sm:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-400 tracking-wider">
-            Crônicas da Aliança Arcana
+          <h1 class="font-title text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-pink-400 tracking-wider">
+            HEROES LOVE TO LIE
           </h1>
-          <p class="text-[9px] sm:text-[10px] text-slate-400 font-medium">Heróis Amam Mentir nos Reinos da Magia</p>
+          <p class="text-[9px] text-slate-400 font-medium">Taverna Caótica & Blefe Arcana</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- Botão Mute / Efeitos Sonoros -->
+        <!-- Som / Efeitos Sonoros -->
         <button
           id="btn-toggle-sound"
-          class="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-xs transition shadow-sm"
+          class="p-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-xs transition shadow-sm"
           title="Ativar/Desativar Efeitos Sonoros"
         >
           🔊
         </button>
 
-        <!-- Botão Cola Rápida -->
-        <button
-          id="btn-quick-cheat"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-title text-xs font-semibold shadow-sm transition transform active:scale-95"
-          title="Tabela de Consulta Rápida"
-        >
-          <span>📖</span>
-          <span class="hidden sm:inline">Cola Rápida</span>
-        </button>
-
-        <!-- Botão Salão da Glória & Ranking -->
-        <button
-          id="btn-open-ranking"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-title text-xs font-semibold shadow-sm transition transform active:scale-95"
-          title="Ver Classificação Geral e Estatísticas"
-        >
-          <span>🏆</span>
-          <span class="hidden sm:inline">Ranking</span>
-        </button>
-
-        <!-- Botão Grimório de Regras -->
+        <!-- Grimório / Regras -->
         <button
           id="btn-open-rules"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-title text-xs font-semibold shadow-sm transition transform active:scale-95"
-          title="Ver Tabela de Regras e Habilidades"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-title text-xs font-bold shadow-sm transition transform active:scale-95"
+          title="Regras do Jogo"
         >
-          <span>📜</span>
-          <span class="hidden sm:inline">Grimório</span>
+          <span>📖</span>
+          <span>Regras</span>
         </button>
 
-        <!-- Botão Configurar Supabase -->
+        <!-- Botão Config Supabase (Opcional) -->
         <button
           id="btn-open-db-config"
-          class="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition"
-          title="Configuração Supabase"
+          class="p-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition"
+          title="Configurações Supabase"
         >
           ⚙️
         </button>
       </div>
     </header>
 
-    <!-- CONTAINER PRINCIPAL -->
-    <main class="flex-1 w-full max-w-7xl mx-auto flex flex-col p-2 sm:p-4 relative">
+    <!-- CONTAINER PRINCIPAL DINÂMICO -->
+    <main class="flex-1 w-full max-w-5xl mx-auto flex flex-col overflow-hidden relative">
 
       <!-- ============================================== -->
-      <!-- TELA 1: LOBBY (CRIAR / ENTRAR / SALA DE ESPERA) -->
+      <!-- TELA 1: ENTRADA NA TAVERNA (SOLO / LOBBY)     -->
       <!-- ============================================== -->
-      <section id="screen-lobby" class="w-full max-w-xl mx-auto my-auto py-6 space-y-6">
-
-        <!-- Banner Heroico -->
-        <div class="text-center space-y-2">
-          <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full border-2 border-amber-500/40 bg-gradient-to-tr from-purple-950 to-slate-900 flex items-center justify-center text-3xl sm:text-4xl shadow-arcane-glow">
-            🗡️
+      <section id="screen-lobby" class="flex-1 w-full max-w-lg mx-auto p-3 sm:p-4 flex flex-col justify-between overflow-y-auto no-scrollbar">
+        
+        <div class="space-y-4 my-auto">
+          <!-- Banner Heroico -->
+          <div class="text-center space-y-1">
+            <div class="w-14 h-14 mx-auto rounded-2xl border-2 border-amber-400 bg-gradient-to-tr from-purple-950 to-pink-950 flex items-center justify-center text-3xl shadow-tavern-glow animate-pulse">
+              🐉
+            </div>
+            <h2 class="font-title text-xl sm:text-2xl font-black text-amber-300 tracking-wide drop-shadow">
+              A Taverna dos Heróis
+            </h2>
+            <p class="text-xs text-slate-300 max-w-xs mx-auto">
+              Monte sua Party de 6 Classes ou abata 3 Monstros Lendários. Blefe à vontade, mas cuidado com quem gritar "MENTIRA!"
+            </p>
           </div>
-          <h2 class="font-title text-2xl sm:text-3xl font-extrabold text-amber-300 tracking-wide drop-shadow">
-            Santuário dos Herois
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
-            Blefe, deduza identidades secretas e elimine seus rivais para reivindicar a supremacia arcana.
-          </p>
-        </div>
 
-        <!-- Alerta de Conexão Supabase (se necessário) -->
-        <div id="lobby-supabase-notice" class="hidden p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span>⚠️</span>
-            <span>Credenciais do Supabase ausentes ou incompletas.</span>
-          </div>
-          <button id="btn-fix-credentials" class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold text-[10px] uppercase">
-            Configurar
-          </button>
-        </div>
-
-        <!-- Painel de Entrada no Jogo (Antes de estar em uma sala) -->
-        <div id="lobby-form-container" class="bg-fantasy-surface/90 border border-amber-500/30 rounded-2xl p-4 sm:p-6 shadow-xl space-y-5">
-          
-          <!-- Nome e Avatar -->
-          <div class="space-y-3">
+          <!-- Formulário de Entrada -->
+          <div class="tavern-panel rounded-2xl p-4 space-y-3.5 shadow-xl">
+            <!-- Nome do Jogador -->
             <div>
-              <label for="input-nickname" class="block font-title text-xs font-semibold text-amber-300 uppercase tracking-wider mb-1">
-                Seu Nome Arcano
+              <label for="input-nickname" class="block font-title text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-1">
+                Seu Nome na Taverna:
               </label>
               <input
                 id="input-nickname"
                 type="text"
                 maxlength="16"
-                placeholder="Ex: Gandalf, Percy, Harry..."
-                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 text-slate-100 text-sm font-medium transition"
+                placeholder="Ex: Gandalf, Percy, Valquíria..."
+                value="Herói Audaz"
+                class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 focus:border-amber-400 focus:outline-none text-slate-100 text-xs font-medium"
               />
             </div>
 
+            <!-- Seleção de Líder de Grupo (1 das 6 Classes) -->
             <div>
-              <label class="block font-title text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
-                Escolha seu Arquétipo
+              <label class="block font-title text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1.5">
+                Escolha seu Líder de Grupo:
               </label>
-              <div class="grid grid-cols-4 sm:grid-cols-7 gap-2" id="avatar-selector">
-                <button type="button" data-avatar="mago" class="avatar-opt p-2 rounded-xl border-2 border-amber-400 bg-amber-500/20 text-center flex flex-col items-center justify-center transition">
-                  <span class="text-2xl">🧙‍♂️</span>
-                  <span class="text-[9px] font-medium text-slate-300 mt-1">Mago</span>
-                </button>
-                <button type="button" data-avatar="semideus" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
-                  <span class="text-2xl">⚡</span>
-                  <span class="text-[9px] font-medium text-slate-300 mt-1">Semideus</span>
-                </button>
-                <button type="button" data-avatar="elfo" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
-                  <span class="text-2xl">🧝</span>
-                  <span class="text-[9px] font-medium text-slate-300 mt-1">Elfo</span>
-                </button>
-                <button type="button" data-avatar="guerreiro" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
-                  <span class="text-2xl">⚔️</span>
-                  <span class="text-[9px] font-medium text-slate-300 mt-1">Guerreiro</span>
-                </button>
-                <button type="button" data-avatar="anão" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
-                  <span class="text-2xl">⛏️</span>
-                  <span class="text-[9px] font-medium text-slate-300 mt-1">Anão</span>
-                </button>
-                <button type="button" data-avatar="oraculo" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
-                  <span class="text-2xl">🔮</span>
-                  <span class="text-[9px] font-medium text-slate-300 mt-1">Oráculo</span>
-                </button>
-                <button type="button" data-avatar="ladrao" class="avatar-opt p-2 rounded-xl border border-slate-700 bg-slate-900 text-center flex flex-col items-center justify-center transition">
-                  <span class="text-2xl">🗡️</span>
-                  <span class="text-[9px] font-medium text-slate-300 mt-1">Ladrão</span>
-                </button>
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5" id="leader-selector">
+                <!-- Renderizado via JS -->
               </div>
+              <div id="selected-leader-preview" class="mt-2 p-2 rounded-xl bg-black/40 border border-slate-800 text-[10px] text-slate-300 text-center">
+                <!-- Prévia da passiva -->
+              </div>
+            </div>
+
+            <!-- BOTÃO DE DESTAQUE: JOGAR AGORA SOLO (100% OFFLINE / ZERO CONFIG) -->
+            <div class="pt-2">
+              <button
+                id="btn-play-solo-instant"
+                class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-sm font-black shadow-attackable-glow tracking-wider uppercase transition transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+              >
+                <span>⚔️</span>
+                <span>JOGAR AGORA (Solo vs Bots)</span>
+              </button>
             </div>
           </div>
 
-          <div class="border-t border-slate-800 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <!-- Criar Sala -->
-            <div class="space-y-2">
-              <span class="block text-xs font-title font-semibold text-slate-300">Criar Novo Conclave</span>
-              <button
-                id="btn-create-room"
-                class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-sm font-bold shadow-gold-glow tracking-wider uppercase transition transform active:scale-95"
-              >
+          <!-- Seção de Aliança Multiplayer (Supabase) -->
+          <div class="border-t border-slate-800 pt-3 flex items-center justify-between gap-3 text-xs">
+            <span class="text-slate-400 text-[11px]">Deseja jogar com amigos online?</span>
+            <button
+              id="btn-toggle-multiplayer"
+              class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-title text-[10px] font-bold uppercase transition"
+            >
+              👑 Criar / Entrar em Sala
+            </button>
+          </div>
+
+          <!-- Painel Retrátil Multiplayer -->
+          <div id="multiplayer-drawer" class="hidden tavern-panel rounded-2xl p-3.5 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <button id="btn-create-room" class="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-title text-xs font-bold uppercase transition">
                 👑 Criar Sala
               </button>
-            </div>
-
-            <!-- Entrar com Código -->
-            <div class="space-y-2">
-              <span class="block text-xs font-title font-semibold text-slate-300">Entrar em Aliança Existente</span>
-              <div class="flex gap-2">
+              <div class="flex gap-1.5">
                 <input
                   id="input-room-code"
                   type="text"
                   maxlength="6"
-                  placeholder="CÓDIGO (ex: RUNA)"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-purple-400 focus:outline-none text-slate-100 text-xs uppercase font-mono tracking-widest text-center"
+                  placeholder="CÓDIGO"
+                  class="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs font-mono uppercase text-center"
                 />
-                <button
-                  id="btn-join-room"
-                  class="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-title text-xs font-bold tracking-wider uppercase transition"
-                >
+                <button id="btn-join-room" class="px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-title text-xs font-bold uppercase transition">
                   Entrar
                 </button>
               </div>
@@ -201,483 +157,273 @@
           </div>
         </div>
 
-        <!-- Sala de Espera do Lobby (Quando já criou ou entrou em uma sala) -->
-        <div id="lobby-waiting-container" class="hidden bg-fantasy-surface/95 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-5">
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-4">
-            <div>
-              <span class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Código da Aliança</span>
-              <div class="flex items-center gap-2 mt-0.5">
-                <span id="display-room-code" class="font-title text-2xl sm:text-3xl font-extrabold text-amber-400 tracking-widest font-mono">
-                  ----
-                </span>
-                <button
-                  id="btn-copy-code"
-                  class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-amber-300 text-xs font-semibold flex items-center gap-1 transition"
-                  title="Copiar Código"
-                >
-                  <span>📋</span>
-                  <span id="copy-btn-text">Copiar</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span id="player-count-badge" class="text-xs font-semibold text-emerald-400">
-                1 / 6 Jogadores
-              </span>
-            </div>
-          </div>
-
-          <!-- Lista de Jogadores no Lobby -->
-          <div>
-            <h3 class="font-title text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-              Guerreiros Presentes:
-            </h3>
-            <div id="lobby-players-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <!-- Renderizado via JS -->
-            </div>
-          </div>
-
-          <!-- Ação do Host para Iniciar Partida -->
-          <div class="border-t border-slate-800 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <button
-              id="btn-leave-lobby"
-              class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 text-xs font-semibold transition"
-            >
-              🚪 Abandonar Aliança
-            </button>
-
-            <div id="host-start-container" class="flex flex-wrap items-center gap-2">
-              <button
-                id="btn-add-bot"
-                class="px-4 py-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 font-title text-xs font-bold tracking-wider uppercase transition shadow-sm flex items-center gap-1.5 active:scale-95"
-                title="Adicionar um jogador bot controlado por IA"
-              >
-                <span>🤖</span>
-                <span>+ Invocar Bot Arcano</span>
-              </button>
-              <button
-                id="btn-start-game"
-                disabled
-                class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-title text-xs sm:text-sm font-bold shadow-gold-glow tracking-wider uppercase transition opacity-40 cursor-not-allowed"
-              >
-                ⚔️ Iniciar Partida (Mín. 2)
-              </button>
-            </div>
-            <div id="guest-waiting-text" class="hidden text-xs text-amber-400/80 italic text-center sm:text-right">
-              Aguardando o Soberano da Sala iniciar a contenda...
-            </div>
-          </div>
+        <div class="text-center text-[10px] text-slate-500 pb-1">
+          Inspirado em Here to Slay & Heroes Love to Lie • 100% Responsivo
         </div>
       </section>
 
       <!-- ============================================== -->
-      <!-- TELA 2: MESA DE JOGO (BATALHA REALTIME)        -->
+      <!-- TELA 2: MESA DE JOGO (5 ZONAS MOBILE-FIRST)    -->
       <!-- ============================================== -->
-      <section id="screen-mesa" class="hidden flex-1 flex flex-col justify-between space-y-3 pb-2 relative">
+      <section id="screen-mesa" class="hidden flex-1 w-full h-full flex flex-col justify-between overflow-hidden relative">
         
-        <!-- BANNER DE SELEÇÃO DIRETA DE ALVO NA MESA -->
-        <div id="banner-target-selection" class="hidden w-full bg-amber-500/20 border-2 border-amber-400 rounded-xl p-2.5 flex items-center justify-between shadow-gold-glow animate-pulse">
-          <div class="flex items-center gap-2">
-            <span class="text-xl">🎯</span>
-            <span id="target-selection-text" class="font-title text-xs sm:text-sm font-bold text-amber-300">
-              Selecione um oponente na mesa para aplicar a ação
-            </span>
-          </div>
-          <button
-            id="btn-cancel-target-selection"
-            class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-600 transition"
-          >
-            ✕ Cancelar
-          </button>
+        <!-- ZONA 1: BARRA DE RIVAIS (12% da Altura) -->
+        <div id="zone-rivals-bar" class="w-full flex-shrink-0 h-[12%] min-h-[50px] max-h-[64px] border-b border-slate-800/80 bg-slate-950/60 flex items-center px-1">
+          <!-- Renderizado via renderMesa.js -->
         </div>
 
-        <!-- BARRA SUPERIOR DA MESA: OPONENTES -->
-        <div class="w-full">
-          <div class="flex items-center justify-between px-2 py-1 text-xs text-slate-400">
-            <div class="flex items-center gap-2">
-              <span class="font-title font-semibold text-amber-400">Sala:</span>
-              <span id="mesa-room-code" class="font-mono font-bold text-slate-200">----</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span id="mesa-phase-indicator" class="px-2 py-0.5 rounded-full bg-purple-900/40 border border-purple-500/30 text-purple-300 text-[10px] uppercase font-bold tracking-wider">
-                Fase: Ação
-              </span>
-            </div>
-          </div>
-
-          <!-- ARENA DOS OPONENTES -->
-          <div id="mesa-opponents-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
-            <!-- Inserido dinamicamente via renderMesa.js -->
-          </div>
+        <!-- ZONA 2: O COVIL DOS MONSTROS (33% da Altura) -->
+        <div id="zone-covil" class="w-full flex-shrink-0 h-[33%] min-h-[140px] px-2 py-1 flex flex-col justify-center">
+          <!-- Renderizado via renderMesa.js -->
         </div>
 
-        <!-- ÁREA CENTRAL: ALTAR DAS CRÔNICAS & AÇÕES PENDENTES -->
-        <div class="my-auto py-2">
-          <div id="mesa-altar-container" class="w-full">
-            <!-- Inserido dinamicamente via renderMesa.js -->
-          </div>
+        <!-- ZONA 3: ARENA DE DADOS 2D6 & LOGS (15% da Altura) -->
+        <div id="zone-dice-arena" class="w-full flex-shrink-0 h-[15%] min-h-[70px] flex items-center justify-center">
+          <!-- Renderizado via renderMesa.js -->
         </div>
 
-        <!-- BARRA INFERIOR: REINO DO JOGADOR LOCAL -->
-        <div class="w-full bg-fantasy-surface/95 border-2 border-amber-500/30 rounded-2xl p-3 sm:p-4 shadow-2xl space-y-3 backdrop-blur-md">
-          
-          <!-- Informações do Jogador Local & Suas 2 Cartas -->
-          <div class="flex flex-col md:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-3">
-            
-            <!-- Dados do Jogador -->
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl border border-amber-500/40 bg-slate-900 flex items-center justify-center text-2xl shadow-inner">
-                <span id="local-player-avatar">🧙‍♂️</span>
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span id="local-player-name" class="font-title text-base sm:text-lg font-bold text-amber-300">
-                    Você
-                  </span>
-                  <span id="local-turn-badge" class="hidden px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-title text-[10px] font-extrabold uppercase shadow animate-pulse">
-                    Sua Vez!
-                  </span>
-                </div>
-                
-                <div class="flex items-center gap-3 text-xs mt-1">
-                  <div class="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-950/60 border border-amber-500/40 text-amber-300 font-bold">
-                    <span>💎</span>
-                    <span id="local-player-runes">2</span>
-                    <span class="text-[10px] text-amber-400 font-normal">Runas</span>
-                  </div>
-                  <span id="local-player-status" class="text-emerald-400 font-semibold text-[11px]">
-                    ● Em Combate
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- As 2 Cartas do Jogador Local -->
-            <div class="flex items-center gap-3" id="local-player-cards">
-              <!-- Inserido dinamicamente via renderMesa.js -->
-            </div>
-          </div>
-
-          <!-- Barra de Provocações Rápidas (Emotes & Falas) -->
-          <div id="mesa-emote-bar" class="flex items-center justify-center gap-1 sm:gap-2 py-1 overflow-x-auto border-b border-slate-800/80 pb-2">
-            <span class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider hidden sm:inline mr-1">Provocações:</span>
-            <button type="button" data-emote="👀 Sei que é mentira..." class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
-              👀 Mentira...
-            </button>
-            <button type="button" data-emote="🤝 Trégua por agora?" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
-              🤝 Trégua?
-            </button>
-            <button type="button" data-emote="😇 Pode confiar em mim" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
-              😇 Confie em mim
-            </button>
-            <button type="button" data-emote="🔥 Vai encarar?" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
-              🔥 Vai encarar?
-            </button>
-            <button type="button" data-emote="💀 Erro fatal!" class="btn-emote px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-[11px] text-slate-300 transition whitespace-nowrap active:scale-95 shadow-sm">
-              💀 Erro fatal!
-            </button>
-          </div>
-
-          <!-- Barra de Ações do Turno -->
-          <div id="mesa-action-bar-container">
-            <!-- Inserido dinamicamente via renderMesa.js -->
-          </div>
+        <!-- ZONA 4: SUA PARTY NA MESA (20% da Altura) -->
+        <div id="zone-player-party" class="w-full flex-shrink-0 h-[20%] min-h-[130px] px-2 flex flex-col justify-center">
+          <!-- Renderizado via renderMesa.js -->
         </div>
 
-        <!-- CRÔNICAS DA MESA (FEED DE LOGS) EXPANSÍVEL -->
-        <div class="w-full bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
-          <div class="px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs">
-            <div class="flex items-center gap-2">
-              <span class="text-amber-400">📜</span>
-              <span class="font-title font-bold text-slate-300">Crônicas do Santuário</span>
-            </div>
-            <span class="text-[10px] text-slate-500">Eventos em Tempo Real</span>
-          </div>
-          <div id="mesa-logs-container" class="max-h-28 sm:max-h-36 overflow-y-auto p-2 space-y-1.5">
-            <!-- Logs inseridos dinamicamente -->
-          </div>
+        <!-- ZONA 5: BASE FIXA (MÃO & CONTROLES DO POLEGAR - 20% da Altura) -->
+        <div id="zone-thumb-controls" class="w-full flex-shrink-0 h-[20%] min-h-[140px] flex flex-col justify-between">
+          <!-- Renderizado via renderMesa.js -->
+        </div>
+
+        <!-- REAÇÃO / BLEFE FLUTUANTE ("🚨 MENTIRA!") -->
+        <div id="reaction-banner-container">
+          <!-- Inserido dinamicamente via renderMesa.js -->
         </div>
       </section>
 
     </main>
 
     <!-- ============================================== -->
-    <!-- MODAL 1: GRIMÓRIO DE REGRAS COMPLETO           -->
+    <!-- MODAL 1: AÇÃO DA CARTA DA MÃO (BOTTOM SHEET)   -->
     <!-- ============================================== -->
-    <div id="modal-rules" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div class="w-full max-w-2xl bg-fantasy-surface border-2 border-amber-500/50 rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[90vh] flex flex-col">
-        <div class="flex items-center justify-between border-b border-amber-500/30 pb-3 mb-3">
+    <div id="modal-card-action" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div class="w-full max-w-sm tavern-panel rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-4 drawer-slide-up">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
           <div class="flex items-center gap-2">
-            <span class="text-2xl">📜</span>
-            <h3 class="font-title text-base sm:text-xl font-bold text-amber-300">
-              Grimório Sagrado das Regras & Cartas
-            </h3>
+            <span id="card-action-icon" class="text-2xl">⚔️</span>
+            <div>
+              <h3 id="card-action-title" class="font-title text-sm sm:text-base font-bold text-amber-300 leading-tight">
+                Nome da Carta
+              </h3>
+              <span id="card-action-subtitle" class="text-[10px] text-slate-400">Tipo de Carta</span>
+            </div>
           </div>
-          <button id="btn-close-rules" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm">
-            ✕
-          </button>
+          <button id="btn-close-card-action" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
         </div>
 
-        <div id="rules-content" class="flex-1 overflow-y-auto pr-1">
-          <!-- Renderizado via renderMesa.js -->
+        <div id="card-action-description" class="text-xs text-slate-300 bg-black/40 p-3 rounded-xl border border-slate-800/80 leading-relaxed">
+          Descrição detalhada dos efeitos e rolagens da carta.
         </div>
 
-        <div class="border-t border-slate-800 pt-3 text-right">
-          <button id="btn-close-rules-bottom" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-title text-xs font-bold uppercase tracking-wider">
-            Fechar Grimório
-          </button>
+        <!-- Botões Dinâmicos de Jogada -->
+        <div id="card-action-buttons-container" class="space-y-2 pt-1">
+          <!-- Inserido via JS -->
         </div>
       </div>
     </div>
 
     <!-- ============================================== -->
-    <!-- MODAL 2: SELETOR DE ALVO (ATAQUE / ROUBO)      -->
+    <!-- MODAL 2: SELETOR DE CLASSE PARA BLEFAR         -->
     <!-- ============================================== -->
-    <div id="modal-target-selector" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
-      <div class="w-full max-w-sm bg-fantasy-surface border-2 border-amber-500/50 rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4">
-        <div class="text-center">
-          <span class="text-3xl" id="target-modal-icon">🎯</span>
-          <h3 id="target-modal-title" class="font-title text-base font-bold text-amber-300 mt-1">
-            Escolha seu Alvo
-          </h3>
-          <p id="target-modal-subtitle" class="text-xs text-slate-400 mt-0.5">
-            Selecione qual adversário receberá esta ação.
-          </p>
+    <div id="modal-bluff-selector" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-sm tavern-panel rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-bluff-glow">
+        <div class="flex items-center justify-between border-b border-pink-500/40 pb-2">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xl">🎭</span>
+            <h3 class="font-title text-xs sm:text-sm font-black text-pink-300 uppercase tracking-wider">
+              Blefar Classe do Herói
+            </h3>
+          </div>
+          <button id="btn-close-bluff-selector" class="text-slate-400 hover:text-white text-xs">✕</button>
         </div>
 
-        <div id="target-selector-list" class="space-y-2">
-          <!-- Botões de alvos preenchidos via JS -->
+        <div id="bluff-selector-content">
+          <!-- Renderizado via renderMesa.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 3: DETALHES DO MONSTRO & ATAQUE (COVIL)  -->
+    <!-- ============================================== -->
+    <div id="modal-monster-detail" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-sm tavern-panel border-2 border-orange-500/60 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-monster-flame">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center gap-2">
+            <span id="monster-detail-icon" class="text-3xl">🐉</span>
+            <div>
+              <h3 id="monster-detail-name" class="font-title text-sm sm:text-base font-bold text-amber-300">
+                Nome do Monstro
+              </h3>
+              <span id="monster-detail-title" class="text-[10px] text-slate-400">Título</span>
+            </div>
+          </div>
+          <button id="btn-close-monster-detail" class="text-slate-400 hover:text-white text-xs">✕</button>
         </div>
 
-        <button id="btn-cancel-target" class="w-full py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-medium hover:text-white">
-          Cancelar
+        <div class="space-y-2 text-xs">
+          <div class="bg-black/40 p-2.5 rounded-xl border border-slate-800 space-y-1">
+            <div class="text-[11px] font-semibold text-slate-300">Classes Exigidas na Party:</div>
+            <div id="monster-detail-reqs" class="flex items-center gap-1.5"></div>
+          </div>
+
+          <div class="bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/40 text-emerald-200">
+            <div class="font-bold text-[11px] text-emerald-400 flex items-center justify-between">
+              <span>🏆 Recompensa por Abate (Rolagem 8+):</span>
+            </div>
+            <p id="monster-detail-reward" class="text-[10px] mt-0.5"></p>
+          </div>
+
+          <div class="bg-red-950/30 p-2.5 rounded-xl border border-red-500/40 text-red-200">
+            <div class="font-bold text-[11px] text-red-400 flex items-center justify-between">
+              <span>💀 Penalidade de Falha Crítica (5-):</span>
+            </div>
+            <p id="monster-detail-penalty" class="text-[10px] mt-0.5"></p>
+          </div>
+        </div>
+
+        <button
+          id="btn-confirm-monster-attack"
+          class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider transition card-chunky shadow-attackable-glow flex items-center justify-center gap-2"
+        >
+          <span>⚔️</span>
+          <span>Atacar Monstro (2 PA)</span>
         </button>
       </div>
     </div>
 
     <!-- ============================================== -->
-    <!-- MODAL 3: ESCOLHA DE CARTA A SACRIFICAR         -->
+    <!-- MODAL 4: INSPECIONAR PARTY DO RIVAL            -->
     <!-- ============================================== -->
-    <div id="modal-sacrifice" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
-      <div class="w-full max-w-md bg-fantasy-surface border-2 border-red-500/60 rounded-2xl shadow-crimson-glow p-4 sm:p-5 space-y-4 text-center">
-        <span class="text-4xl">💥</span>
-        <div>
-          <h3 class="font-title text-base sm:text-lg font-bold text-red-400">
-            Perda de Identidade Arcana!
-          </h3>
-          <p class="text-xs text-slate-300 mt-1">
-            Seu blefe foi frustrado ou você foi atingido por um ataque letal. Escolha qual de suas cartas revelar e descartar:
-          </p>
+    <div id="modal-rival-party" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-md tavern-panel rounded-2xl p-4 sm:p-5 space-y-3.5 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center gap-2">
+            <span id="rival-party-avatar" class="text-2xl">👑</span>
+            <h3 id="rival-party-title" class="font-title text-sm font-bold text-amber-300">
+              Party do Rival
+            </h3>
+          </div>
+          <button id="btn-close-rival-party" class="text-slate-400 hover:text-white text-xs">✕</button>
         </div>
 
-        <div id="sacrifice-card-choices" class="flex items-center justify-center gap-3 py-2">
+        <div id="rival-party-content" class="flex-1 overflow-y-auto no-scrollbar space-y-2 pr-1">
+          <!-- Renderizado via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 5: PILHA DE DESCARTE                     -->
+    <!-- ============================================== -->
+    <div id="modal-discard-pile" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+      <div class="w-full max-w-md tavern-panel rounded-2xl p-4 sm:p-5 space-y-3 max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xl">🗑️</span>
+            <h3 class="font-title text-sm font-bold text-slate-300">Pilha de Descarte</h3>
+          </div>
+          <button id="btn-close-discard-pile" class="text-slate-400 hover:text-white text-xs">✕</button>
+        </div>
+
+        <div id="discard-pile-content" class="flex-1 overflow-y-auto no-scrollbar space-y-1.5 pr-1 text-xs">
           <!-- Inserido dinamicamente -->
         </div>
       </div>
     </div>
 
     <!-- ============================================== -->
-    <!-- MODAL 4: TRANSFIGURAÇÃO DO ARQUIMAGO (TROCA)   -->
+    <!-- MODAL 6: REGRAS & GRIMÓRIO COMPLETO            -->
     <!-- ============================================== -->
-    <div id="modal-exchange" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
-      <div class="w-full max-w-lg bg-fantasy-surface border-2 border-purple-500/60 rounded-2xl shadow-arcane-glow p-4 sm:p-5 space-y-4">
-        <div class="text-center">
-          <span class="text-3xl">🧙‍♂️</span>
-          <h3 class="font-title text-base sm:text-lg font-bold text-purple-300">
-            Transfiguração do Arquimago
-          </h3>
-          <p class="text-xs text-slate-300 mt-0.5">
-            Você comprou 2 cartas do grimório. Selecione quais cartas deseja MANTER na sua mão. As demais retornarão ao fundo do baralho.
-          </p>
+    <div id="modal-rules" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div class="w-full max-w-lg tavern-panel rounded-2xl p-4 sm:p-6 max-h-[90vh] flex flex-col space-y-4">
+        <div class="flex items-center justify-between border-b border-amber-500/30 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📖</span>
+            <h3 class="font-title text-base sm:text-lg font-bold text-amber-300">
+              Regras: Heroes Love to Lie
+            </h3>
+          </div>
+          <button id="btn-close-rules" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
         </div>
 
-        <div id="exchange-cards-container" class="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
-          <!-- Cartas para selecionar -->
+        <div class="flex-1 overflow-y-auto no-scrollbar pr-1 text-xs space-y-3 text-slate-300 leading-relaxed">
+          <div class="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/40 space-y-1">
+            <div class="font-bold text-amber-400 text-[11px] uppercase">🏆 Como Vencer a Partida:</div>
+            <p>1. <strong>Caçador Supremo:</strong> Abata <strong>3 Monstros</strong> do Covil; OU</p>
+            <p>2. <strong>Aliança Completa:</strong> Reúna <strong>6 Classes Diferentes</strong> de Heróis na sua Party (contando seu Líder).</p>
+          </div>
+
+          <div class="space-y-1">
+            <div class="font-bold text-cyan-300 text-[11px] uppercase">💎 Sistema de 3 Pontos de Ação (PA):</div>
+            <p>• <strong>1 PA — Comprar:</strong> Puxa 1 carta do baralho.</p>
+            <p>• <strong>1 PA — Invocar Herói (Honesto):</strong> Baixa a carta face aberta e rola 2d6 gratuitamente para tentar ativar a habilidade dela!</p>
+            <p>• <strong>1 PA — Invocar em Modo Blefe:</strong> Baixa a carta face oculta e declara ser qualquer uma das 6 Classes!</p>
+            <p>• <strong>1 PA — Ativar Herói:</strong> Rola 2d6 para usar a habilidade de um Herói já presente na sua Party.</p>
+            <p>• <strong>2 PA — Atacar Monstro:</strong> Se cumprir as classes exigidas, rola 2d6: se atingir a meta (8+), ganha o monstro; se tirar o valor de falha (5-), sofre a penalidade!</p>
+            <p>• <strong>3 PA — Renovar:</strong> Descarta toda a mão e compra 5 novas cartas.</p>
+          </div>
+
+          <div class="space-y-1">
+            <div class="font-bold text-pink-300 text-[11px] uppercase">🚨 A Regra do Blefe ("MENTIRA!"):</div>
+            <p>Sempre que alguém baixar uma carta, abre-se uma janela de 6 segundos para os outros gritarem <strong>"MENTIRA!"</strong>:</p>
+            <p>• Se a carta era blefe: a carta é <strong>destruída</strong> e o mentiroso perde 1 PA.</p>
+            <p>• Se era verdade: a carta é revelada na Party e o acusador imprudente deve <strong>descartar 2 cartas</strong>.</p>
+          </div>
         </div>
 
-        <div class="flex items-center justify-between border-t border-slate-800 pt-3">
-          <span id="exchange-selection-count" class="text-xs text-amber-300 font-semibold">
-            Selecionadas: 0 / 2
-          </span>
-          <button
-            id="btn-confirm-exchange"
-            disabled
-            class="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-title text-xs font-bold uppercase tracking-wider transition opacity-40 cursor-not-allowed"
-          >
-            Confirmar Troca
+        <div class="border-t border-slate-800 pt-2 text-right">
+          <button id="btn-close-rules-bottom" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-title text-xs font-bold uppercase tracking-wider">
+            Entendido, Vamos Jogar!
           </button>
         </div>
       </div>
     </div>
 
     <!-- ============================================== -->
-    <!-- MODAL 5: VISÃO DO ORÁCULO                      -->
-    <!-- ============================================== -->
-    <div id="modal-oracle-spy" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
-      <div class="w-full max-w-sm bg-fantasy-surface border-2 border-pink-500/60 rounded-2xl shadow-arcane-glow p-4 sm:p-5 space-y-4 text-center">
-        <span class="text-4xl">🔮</span>
-        <div>
-          <h3 class="font-title text-base sm:text-lg font-bold text-pink-300">
-            Visão Profética Revelada
-          </h3>
-          <p class="text-xs text-slate-300 mt-0.5">
-            O Oráculo sussurrou a identidade oculta do seu adversário:
-          </p>
-        </div>
-
-        <div id="oracle-spied-card-display" class="flex justify-center py-2">
-          <!-- Card revelado -->
-        </div>
-
-        <button id="btn-close-oracle" class="w-full py-2.5 rounded-xl bg-pink-700 hover:bg-pink-600 text-white font-title text-xs font-bold uppercase tracking-wider">
-          Guardar Segredo & Concluir Turno
-        </button>
-      </div>
-    </div>
-
-    <!-- ============================================== -->
-    <!-- MODAL 6: TELA DE VITÓRIA SUPREMA               -->
+    <!-- MODAL 7: TELA DE VITÓRIA SUPREMA               -->
     <!-- ============================================== -->
     <div id="modal-victory" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3">
-      <div class="w-full max-w-md bg-gradient-to-b from-amber-950 via-fantasy-surface to-slate-950 border-2 border-amber-400 rounded-3xl shadow-gold-glow p-6 sm:p-8 text-center space-y-5 animate-float">
-        <div class="w-20 h-20 mx-auto rounded-full border-2 border-amber-400 bg-amber-500/20 flex items-center justify-center text-5xl filter drop-shadow">
+      <div class="w-full max-w-sm tavern-panel border-2 border-amber-400 rounded-3xl p-6 text-center space-y-4 shadow-tavern-glow animate-pop">
+        <div class="w-16 h-16 mx-auto rounded-full border-2 border-amber-400 bg-amber-500/20 flex items-center justify-center text-4xl shadow-md">
           👑
         </div>
 
         <div class="space-y-1">
-          <span class="text-xs font-title font-bold text-amber-400 uppercase tracking-widest">
-            Fim do Duelo Arcano
+          <span class="text-[10px] font-title font-bold text-amber-400 uppercase tracking-widest">
+            Fim da Batalha na Taverna
           </span>
-          <h2 id="victory-player-name" class="font-title text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-300">
-            Vencedor Lendário!
+          <h2 id="victory-title" class="font-title text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-purple-300">
+            Vitória Lendária!
           </h2>
-          <p class="text-xs sm:text-sm text-slate-300">
-            Todos os outros heróis tiveram suas identidades expostas ou caíram em combate. O reino da Aliança Arcana agora é seu!
-          </p>
+          <p id="victory-message" class="text-xs text-slate-300"></p>
         </div>
 
-        <div class="pt-3 space-y-2">
-          <!-- Botão Revanche Instantânea (Host) -->
+        <div class="pt-2 space-y-2">
           <button
-            id="btn-rematch-same-room"
-            class="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-sm font-bold uppercase tracking-wider shadow-gold-glow transition transform hover:scale-105 active:scale-95"
+            id="btn-play-again"
+            class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg transition transform active:scale-95"
           >
-            ⚔️ Jogar Novamente (Mesma Sala)
+            ⚔️ Jogar Novamente
           </button>
-          
           <button
             id="btn-return-lobby"
-            class="w-full py-2.5 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-semibold uppercase tracking-wider transition"
+            class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold uppercase transition"
           >
-            Voltar ao Santuário Principal
+            Voltar ao Menu
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ============================================== -->
-    <!-- MODAL 7: SALÃO DA GLÓRIA & RANKING             -->
-    <!-- ============================================== -->
-    <div id="modal-ranking" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-      <div class="w-full max-w-2xl bg-fantasy-surface border-2 border-amber-500/50 rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[92vh] flex flex-col">
-        <div class="flex items-center justify-between border-b border-amber-500/30 pb-3 mb-3">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl">🏆</span>
-            <h3 class="font-title text-base sm:text-xl font-bold text-amber-300">
-              Salão da Glória & Registros Arcanos
-            </h3>
-          </div>
-          <button id="btn-close-ranking" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm">
-            ✕
-          </button>
-        </div>
-
-        <div id="ranking-content" class="flex-1 overflow-y-auto pr-1">
-          <!-- Renderizado via renderMesa.js -->
-        </div>
-
-        <div class="border-t border-slate-800 pt-3 text-right">
-          <button id="btn-close-ranking-bottom" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-title text-xs font-bold uppercase tracking-wider">
-            Fechar Salão
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================================== -->
-    <!-- MODAL 8: CONFIGURAÇÃO DE CREDENCIAIS SUPABASE  -->
-    <!-- ============================================== -->
-    <div id="modal-supabase-config" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
-      <div class="w-full max-w-md bg-fantasy-surface border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="font-title text-sm font-bold text-slate-200">
-            ⚙️ Conexão Supabase
-          </h3>
-          <button id="btn-close-db-config" class="text-slate-400 hover:text-white">✕</button>
-        </div>
-
-        <p class="text-xs text-slate-300 leading-relaxed">
-          As credenciais podem ser definidas via arquivo <code class="text-amber-400">.env</code> (<code class="text-slate-400">VITE_SUPABASE_URL</code> e <code class="text-slate-400">VITE_SUPABASE_ANON_KEY</code>) ou inseridas manualmente abaixo para esta sessão:
-        </p>
-
-        <div class="space-y-3">
-          <div>
-            <label for="cfg-supabase-url" class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
-              Project URL
-            </label>
-            <input
-              id="cfg-supabase-url"
-              type="text"
-              placeholder="https://xyzcompany.supabase.co"
-              class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
-            />
-          </div>
-
-          <div>
-            <label for="cfg-supabase-key" class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
-              Anon Key
-            </label>
-            <input
-              id="cfg-supabase-key"
-              type="password"
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-              class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
-            />
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button id="btn-save-db-config" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-title text-xs font-bold uppercase">
-            Salvar & Recarregar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================================== -->
-    <!-- DRAWER RETRÁTIL: COLA RÁPIDA DE HABILIDADES    -->
-    <!-- ============================================== -->
-    <div id="drawer-quick-cheat" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-fantasy-surface/95 border-l-2 border-amber-500/50 shadow-2xl p-4 flex flex-col backdrop-blur-md">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
-        <div class="flex items-center gap-2">
-          <span class="text-xl">📖</span>
-          <h3 class="font-title text-sm font-bold text-amber-300">Cola Rápida das Cartas</h3>
-        </div>
-        <button id="btn-close-quick-cheat" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
-      </div>
-      <div id="quick-cheat-content" class="flex-1 overflow-y-auto pr-1 text-xs space-y-2">
-        <!-- Inserido dinamicamente via renderMesa.js -->
-      </div>
-    </div>
-
-    <!-- BANNER TOAST ÉPICO (CENTRAL / TOP) -->
-    <div id="epic-action-toast" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[90%] px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-950 via-slate-900 to-purple-950 border-2 border-amber-400 text-center shadow-gold-glow pointer-events-none transition-all duration-300">
-      <div id="epic-action-toast-text" class="font-title text-xs sm:text-sm font-bold text-amber-200"></div>
-    </div>
-
-    <!-- Scripts da Aplicação -->
+    <!-- Script Principal -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -2,83 +2,108 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-fantasy-dark text-slate-100 font-inter antialiased min-h-screen selection:bg-fantasy-gold/30 selection:text-fantasy-goldLight;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 60%),
-      radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 0% 100%, rgba(6, 182, 212, 0.08) 0%, transparent 50%);
-    background-attachment: fixed;
-  }
-
-  h1, h2, h3, h4, .font-title {
-    @apply font-cinzel tracking-wider;
-  }
+:root {
+  color-scheme: dark;
 }
 
-/* Custom Grimoire Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(11, 15, 25, 0.7);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(245, 158, 11, 0.3);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 158, 11, 0.6);
-}
-
-/* Arcane Card Styles */
-.card-perspective {
-  perspective: 1000px;
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #120D1A;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.15), transparent 70%),
+    radial-gradient(circle at 10% 90%, rgba(245, 158, 11, 0.08), transparent 50%),
+    linear-gradient(180deg, #1A1423 0%, #120D1A 100%);
+  color: #F8FAFC;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  height: 100dvh;
+  min-height: 100dvh;
 }
 
-.card-inner {
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
+/* Scrollbar invisível e suave para mobile carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.card-flipped {
-  transform: rotateY(180deg);
+/* Moldura grossa tátil de card game físico */
+.card-chunky {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.18s ease;
 }
 
-.glow-hover {
-  transition: all 0.25s ease-out;
-}
-.glow-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.25);
-  border-color: rgba(245, 158, 11, 0.7);
+.card-chunky:active {
+  transform: scale(0.96);
 }
 
-/* Screen Shake Animation on Card Destruction */
-@keyframes screenShake {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  20% { transform: translate(-4px, 3px) rotate(-1deg); }
-  40% { transform: translate(4px, -3px) rotate(1deg); }
-  60% { transform: translate(-3px, -2px) rotate(0deg); }
-  80% { transform: translate(3px, 2px) rotate(1deg); }
+/* Textura e acabamento de taverna */
+.tavern-panel {
+  background: linear-gradient(180deg, rgba(45, 31, 61, 0.95) 0%, rgba(26, 20, 35, 0.98) 100%);
+  border: 2px solid #442F5C;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.animate-shake {
-  animation: screenShake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+/* Estilo do dado 2d6 físico */
+.dice-face {
+  background: linear-gradient(145deg, #FFFBEB 0%, #FDE68A 100%);
+  border: 2px solid #D97706;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), inset 0 -3px 0 rgba(180, 83, 9, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  color: #78350F;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
 }
 
-/* Speech Bubble Tip */
-.speech-bubble::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 6px 6px 0;
-  border-style: solid;
-  border-color: rgba(139, 92, 246, 0.9) transparent;
-  display: block;
-  width: 0;
+/* Cristais de Ação (PA) */
+.pa-crystal {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+  border: 2px solid #E0F2FE;
+  box-shadow: 0 0 10px #38BDF8, inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  transform: rotate(45deg);
+  display: inline-block;
+  transition: all 0.25s ease;
+}
+
+.pa-crystal.empty {
+  background: #334155;
+  border-color: #64748B;
+  box-shadow: none;
+  opacity: 0.4;
+}
+
+/* Selo de Blefe Misterioso */
+.bluff-mask-badge {
+  background: linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%);
+  border: 2px solid #FDF2F8;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.8);
+}
+
+/* Pílula de monstro atacável */
+.monster-attackable {
+  border-color: #22C55E !important;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.6) !important;
+}
+
+/* Animação suave para modal e drawer */
+.drawer-slide-up {
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
