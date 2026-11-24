@@ -18,6 +18,11 @@ import {
 import { botAI } from './engine/botAI.js';
 import { soundManager } from './lib/soundFX.js';
 import {
+  getSupabaseConfig,
+  saveRuntimeCredentials,
+  hasValidCredentials,
+} from './lib/supabase.js';
+import {
   renderRivalsBarHTML,
   renderCovilHTML,
   renderDiceArenaHTML,
@@ -122,6 +127,17 @@ const DOM = {
   modalGameLog: document.getElementById('modal-game-log'),
   btnCloseGameLog: document.getElementById('btn-close-game-log'),
   gameLogList: document.getElementById('game-log-list'),
+
+  // Modal Configurações & Supabase
+  modalDbConfig: document.getElementById('modal-db-config'),
+  btnCloseDbConfig: document.getElementById('btn-close-db-config'),
+  cfgStatusText: document.getElementById('cfg-status-text'),
+  cfgStatusBadge: document.getElementById('cfg-status-badge'),
+  cfgSupabaseUrl: document.getElementById('cfg-supabase-url'),
+  cfgSupabaseKey: document.getElementById('cfg-supabase-key'),
+  btnSaveDbConfig: document.getElementById('btn-save-db-config'),
+  btnClearDbConfig: document.getElementById('btn-clear-db-config'),
+  cfgFeedbackMsg: document.getElementById('cfg-feedback-msg'),
 
   modalVictory: document.getElementById('modal-victory'),
   victoryTitle: document.getElementById('victory-title'),
@@ -1068,6 +1084,96 @@ if (DOM.btnOpenGameLog) {
 if (DOM.btnCloseGameLog) {
   DOM.btnCloseGameLog.onclick = () => {
     DOM.modalGameLog.classList.add('hidden');
+  };
+}
+
+// ==========================================
+// MODAL CONFIGURAÇÕES & SUPABASE
+// ==========================================
+if (DOM.btnOpenDbConfig) {
+  DOM.btnOpenDbConfig.onclick = () => {
+    const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
+    const isConnected = hasValidCredentials();
+
+    if (DOM.cfgSupabaseUrl) DOM.cfgSupabaseUrl.value = supabaseUrl || '';
+    if (DOM.cfgSupabaseKey) DOM.cfgSupabaseKey.value = supabaseAnonKey || '';
+    if (DOM.cfgFeedbackMsg) DOM.cfgFeedbackMsg.textContent = '';
+
+    if (DOM.cfgStatusText && DOM.cfgStatusBadge) {
+      if (isConnected) {
+        DOM.cfgStatusText.textContent = 'Conectado ao Supabase Cloud';
+        DOM.cfgStatusText.className = 'text-xs font-semibold text-emerald-400';
+        DOM.cfgStatusBadge.textContent = '✓ Conectado';
+        DOM.cfgStatusBadge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      } else {
+        DOM.cfgStatusText.textContent = 'Modo Solo Ativo (Offline / Memória)';
+        DOM.cfgStatusText.className = 'text-xs font-semibold text-amber-400';
+        DOM.cfgStatusBadge.textContent = 'Solo / Local';
+        DOM.cfgStatusBadge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40';
+      }
+    }
+
+    if (DOM.modalDbConfig) DOM.modalDbConfig.classList.remove('hidden');
+  };
+}
+
+if (DOM.btnCloseDbConfig) {
+  DOM.btnCloseDbConfig.onclick = () => {
+    if (DOM.modalDbConfig) DOM.modalDbConfig.classList.add('hidden');
+  };
+}
+
+if (DOM.btnSaveDbConfig) {
+  DOM.btnSaveDbConfig.onclick = () => {
+    const url = DOM.cfgSupabaseUrl?.value.trim() || '';
+    const key = DOM.cfgSupabaseKey?.value.trim() || '';
+
+    if (!url || !key) {
+      if (DOM.cfgFeedbackMsg) {
+        DOM.cfgFeedbackMsg.textContent = '⚠️ Preencha a URL e a Anon Key.';
+        DOM.cfgFeedbackMsg.className = 'text-[11px] text-center font-bold text-rose-400';
+      }
+      return;
+    }
+
+    saveRuntimeCredentials(url, key);
+    if (DOM.cfgFeedbackMsg) {
+      DOM.cfgFeedbackMsg.textContent = '✓ Credenciais salvas com sucesso!';
+      DOM.cfgFeedbackMsg.className = 'text-[11px] text-center font-bold text-emerald-400';
+    }
+    if (DOM.cfgStatusText && DOM.cfgStatusBadge) {
+      DOM.cfgStatusText.textContent = 'Conectado ao Supabase Cloud';
+      DOM.cfgStatusText.className = 'text-xs font-semibold text-emerald-400';
+      DOM.cfgStatusBadge.textContent = '✓ Conectado';
+      DOM.cfgStatusBadge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+    }
+    setTimeout(() => {
+      if (DOM.modalDbConfig) DOM.modalDbConfig.classList.add('hidden');
+    }, 1200);
+  };
+}
+
+if (DOM.btnClearDbConfig) {
+  DOM.btnClearDbConfig.onclick = () => {
+    localStorage.removeItem('ARCANUM_SUPABASE_URL');
+    localStorage.removeItem('ARCANUM_SUPABASE_ANON_KEY');
+    sessionStorage.removeItem('ARCANUM_SUPABASE_URL');
+    sessionStorage.removeItem('ARCANUM_SUPABASE_ANON_KEY');
+
+    if (DOM.cfgSupabaseUrl) DOM.cfgSupabaseUrl.value = '';
+    if (DOM.cfgSupabaseKey) DOM.cfgSupabaseKey.value = '';
+
+    if (DOM.cfgStatusText && DOM.cfgStatusBadge) {
+      DOM.cfgStatusText.textContent = 'Modo Solo Ativo (Offline / Memória)';
+      DOM.cfgStatusText.className = 'text-xs font-semibold text-amber-400';
+      DOM.cfgStatusBadge.textContent = 'Solo / Local';
+      DOM.cfgStatusBadge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40';
+    }
+
+    if (DOM.cfgFeedbackMsg) {
+      DOM.cfgFeedbackMsg.textContent = '🗑️ Credenciais limpas. Modo solo ativado.';
+      DOM.cfgFeedbackMsg.className = 'text-[11px] text-center font-bold text-slate-300';
+    }
   };
 }
 
