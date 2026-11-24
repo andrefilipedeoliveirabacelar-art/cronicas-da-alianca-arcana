@@ -39,6 +39,16 @@
           🔊
         </button>
 
+        <!-- Vídeo Tutorial -->
+        <button
+          id="btn-open-tutorial-video"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 font-title text-xs font-bold shadow-sm transition transform active:scale-95"
+          title="Assistir Vídeo Tutorial"
+        >
+          <span>🎬</span>
+          <span class="hidden sm:inline">Tutorial</span>
+        </button>
+
         <!-- Grimório / Regras -->
         <button
           id="btn-open-rules"
@@ -113,13 +123,21 @@
             </div>
 
             <!-- BOTÃO DE DESTAQUE: JOGAR AGORA SOLO (100% OFFLINE / ZERO CONFIG) -->
-            <div class="pt-2">
+            <div class="pt-2 space-y-2">
               <button
                 id="btn-play-solo-instant"
                 class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-title text-sm font-black shadow-attackable-glow tracking-wider uppercase transition transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
               >
                 <span>⚔️</span>
                 <span>JOGAR AGORA (Solo vs Bots)</span>
+              </button>
+
+              <button
+                id="btn-play-tutorial-video"
+                class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-800/80 via-pink-700/80 to-purple-900/80 hover:from-purple-700 hover:to-pink-600 text-pink-200 font-title text-xs font-bold shadow-md tracking-wider uppercase transition transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 border border-pink-500/30"
+              >
+                <span>🎬</span>
+                <span>Assistir Vídeo Tutorial & Simulação</span>
               </button>
             </div>
           </div>
@@ -383,6 +401,89 @@
           <button id="btn-close-rules-bottom" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-title text-xs font-bold uppercase tracking-wider">
             Entendido, Vamos Jogar!
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL: VÍDEO TUTORIAL & SIMULAÇÃO GUIADA       -->
+    <!-- ============================================== -->
+    <div id="modal-tutorial-video" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+      <div class="w-full max-w-3xl tavern-panel border-2 border-pink-500/50 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh]">
+        <!-- Topo do Modal -->
+        <div class="px-4 py-3 bg-slate-950/90 border-b border-pink-500/30 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🎬</span>
+            <div>
+              <h2 class="font-title text-sm sm:text-base font-black text-pink-300">VÍDEO TUTORIAL & SIMULAÇÃO GUIADA</h2>
+              <p class="text-[10px] text-slate-400">Aprenda as regras completas em uma partida simulada passo a passo</p>
+            </div>
+          </div>
+          <button id="btn-close-tutorial-video" class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 text-sm">
+            ✕
+          </button>
+        </div>
+
+        <!-- Palco do Vídeo -->
+        <div class="relative w-full aspect-[16/9] max-h-[360px] sm:max-h-[440px] bg-gradient-to-b from-[#1A1423] via-[#241830] to-[#140E1B] flex flex-col justify-between p-3 sm:p-4 overflow-hidden border-b border-slate-800">
+          <div class="flex items-center justify-between z-10">
+            <span id="tut-scene-badge" class="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-title font-bold uppercase">
+              Cena 1/6 • Objetivo
+            </span>
+            <span id="tut-timestamp" class="text-[11px] font-mono font-bold text-slate-300 bg-black/60 px-2 py-0.5 rounded-lg border border-slate-700">
+              00:00 / 02:15
+            </span>
+          </div>
+
+          <!-- Palco da Animação -->
+          <div id="tut-stage-viewport" class="relative flex-1 flex flex-col items-center justify-center p-2 z-10 transition-all duration-300">
+          </div>
+
+          <!-- Legenda do Mestre -->
+          <div class="z-20 bg-black/90 backdrop-blur-md border border-amber-500/30 rounded-xl p-2.5 shadow-xl flex items-start gap-2.5">
+            <span class="text-2xl flex-shrink-0">🧙‍♂️</span>
+            <div class="flex-1 min-w-0">
+              <span class="font-title text-[10px] font-bold text-amber-300 block">MESTRE DA TAVERNA:</span>
+              <p id="tut-subtitle" class="text-xs text-slate-100 leading-snug mt-0.5"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles do Vídeo Player -->
+        <div class="p-3 bg-slate-950 space-y-2">
+          <!-- Linha do Tempo -->
+          <div class="h-2 bg-slate-800 rounded-full overflow-hidden cursor-pointer" id="tut-progress-container">
+            <div id="tut-progress-fill" class="h-full bg-gradient-to-r from-pink-500 to-amber-400 w-0 transition-all duration-150"></div>
+          </div>
+
+          <!-- Botoeira -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <button id="tut-btn-prev" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Cena Anterior">⏮️</button>
+              <button id="tut-btn-play" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 text-slate-950 font-title font-black text-xs flex items-center gap-1 active:scale-95">
+                <span id="tut-play-icon">⏸️</span>
+                <span id="tut-play-label">Pausar</span>
+              </button>
+              <button id="tut-btn-next" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Próxima Cena">⏭️</button>
+            </div>
+
+            <!-- Seletor de Cenas -->
+            <div class="flex items-center gap-1 overflow-x-auto no-scrollbar text-[9px] font-bold">
+              <button class="tut-tab px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30" data-tut-scene="0">1. Objetivo</button>
+              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="1">2. Os 3 PA</button>
+              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="2">3. Dados 2d6</button>
+              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="3">4. O Blefe</button>
+              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="4">5. MENTIRA!</button>
+              <button class="tut-tab px-2 py-0.5 rounded bg-slate-800 text-slate-400" data-tut-scene="5">6. Vitória</button>
+            </div>
+
+            <!-- Som / Voz -->
+            <div class="flex items-center gap-1">
+              <button id="tut-btn-voice" class="px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 text-amber-300 text-[10px] font-bold">
+                🎙️ Voz: Ligada
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
